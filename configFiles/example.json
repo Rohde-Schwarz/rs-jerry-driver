@@ -1,0 +1,26 @@
+{
+    "LoginSettings":
+    {
+        "Ip": "some.device.net",
+        "User": "user",
+        "Password": "password"
+    },
+
+    "RxChannelSettings":{
+        "RxChannel": 1
+    },
+
+    "StreamingSettings":
+    {
+        "SatFrequency": 1500000000,
+        "DownFrequency": 0,
+        "BandwidthByAnalysisBandwidth": 194100000
+    },
+
+    "ChannelSettings":
+    {
+        "Port": 5001,
+        "DestinationAddress": "127.0.0.1",
+        "Protocol": "HRZR"
+    }
+}

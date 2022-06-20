@@ -1,0 +1,32 @@
+syntax = "proto3";
+ 
+package RsIcpxGrpcService;
+import "networkStreamingSettings.proto";
+import "protocols.proto";
+import "channel.proto";
+ 
+message StreamBase {
+    bool isStreaming = 1;
+}
+ 
+message UdpSetting {
+    int32 port = 1;
+    string destinationAddress = 2;
+    Protocols protocol = 3;
+    NetworkStreamingInterface sfpInterface = 4; //change has no effect at the moment and is fix in MSR4 => Rx1: SFP3, Rx2: SFP4, Rx3:SFP5, Rx4:SFP6
+   StreamBase base = 5;
+}
+ 
+message TxSetting {
+    Channels channelID = 1;
+    StreamBase base = 2;
+}
+ 
+message SsdSetting {
+    FileConfig fileConfig = 1;
+    StreamBase base = 4;
+}
+ 
+message FileConfig {
+    string filename = 1;
+}

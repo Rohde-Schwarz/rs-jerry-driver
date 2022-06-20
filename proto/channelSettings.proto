@@ -1,0 +1,36 @@
+syntax = "proto3";
+ 
+package RsIcpxGrpcService;
+import "errors.proto";
+import "empty.proto";
+ 
+message RFSetting {
+    double satFrequencyHz = 1;
+    double downFrequencyHz = 2;
+}
+ 
+message SampleRateSetting {
+    double sampleRateHz = 1;
+}
+ 
+message AnalysisBandwidthSetting {
+    double analysisBandwidthHz = 1;
+}
+ 
+message BandwidthSetting {
+    double sampleRateHz = 1;
+    double analysisBandwidthHz = 2;
+}
+ 
+message ChannelSetting {
+    RFSetting rfSetting = 1;
+    BandwidthSetting bandwidthSetting = 2;
+}
+ 
+service MSR4RemoteChannel{
+    rpc setRFSetting(RFSetting) returns (ErrorMessage) {}
+    rpc setBandwidthSettingBySampleRate(SampleRateSetting) returns (ErrorMessage) {}
+    rpc setBandwidthSettingByAnalysisBandwidth(AnalysisBandwidthSetting) returns (ErrorMessage) {}
+    rpc getChannelSetting(Empty) returns (ChannelSetting) {}
+    rpc autoLevel(Empty) returns (ErrorMessage) {}
+}

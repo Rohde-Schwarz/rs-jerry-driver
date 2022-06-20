@@ -1,0 +1,23 @@
+syntax = "proto3";
+ 
+package RsIcpxGrpcService;
+ 
+enum ERRORMSG {        
+    NONE = 0; //successful
+    TimeOut = 1;
+    SettingGPUAddressFailed = 2;
+    SettingClockSourceFailed = 3;
+    SettingChannelSettingsFailed = 4;
+    AutoLevelFailed = 5;
+    SettingStreamingNetworkSettingsFailed = 6;
+    SettingUDPSettingFailed = 7;
+    SatmonResetFailed = 8;
+    SatmonStartFailed = 9;
+    RebootFailed = 10;
+}
+ 
+message ErrorMessage {
+    uint32 errorCode = 1;
+    ERRORMSG errorType = 2;
+    string errorMessage = 3;
+}

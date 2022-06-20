@@ -1,0 +1,77 @@
+{
+    "$id": "https://example.com/person.schema.json",
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "title": "MSR4 Configuration",
+    "type": "object",
+    "properties": {
+      "LoginSettings":{
+        "type": "object",
+        "properties":{
+            "Ip": {
+                "type": "string",
+                "description": "The IP of the MSR4 to connect to."
+              },
+            "User": {
+                "type": "string",
+                "description": "Username for the MSR4 Login."
+              },
+            "Password": {
+                "type": "string",
+                "description": "Password for the MSR4 Login."
+              }
+        },
+        "required":["Ip", "User", "Password"]
+      },
+
+      "RxChannelSettings":{
+        "type": "object",
+        "properties":{
+            "RxChannel": {
+                "type": "integer",
+                "description": "The RxChannel to configure.",
+                "minimum": 0,
+                "maximum": 4
+              }
+        },
+        "required":["RxChannel"]
+      },
+
+      "StreamingSettings":{
+        "type": "object",
+        "properties":{
+            "SatFrequency": {
+                "type": "integer",
+                "description": "Center frequency of the carrier at the satellite. [Hz]"
+              },
+              "DownFrequency": {
+                "type": "integer",
+                "description": "Conversion frequency of the downconverter. Required to calculate the L-band frequency in the receiver from the carrier frequency at the satellite. [Hz]"
+              },
+              "BandwidthByAnalysisBandwidth": {
+                "type": "integer",
+                "description": "Displayed frequency range of the RF input channel, centered around the \"L-Band frequency\".\nThe maximum bandwidth is the full span of the channel, which is 200 MHz. [Hz]",
+                "maximum": 200000000
+              }
+        }
+      },
+
+      "ChannelSettings":{
+        "type": "object",
+        "properties":{
+            "Port": {
+                "type": "integer",
+                "description": "Port on the receiver the data is streamed to."
+              },
+              "DestinationAddress": {
+                "type": "string",
+                "description": "The address on the receiver the data is streamed to, e.g. an IP address."
+              },
+              "Protocol": {
+                "type": "string",
+                "description": "The protocol defines the communication format used to stream the data from the R&S MSR4 to the connected device. Currently, only HRZR protocol is supported for I/Q data streaming. For more information on the protocol, see the application note."
+              }
+        }
+      }
+    },
+    "required": [ "LoginSettings", "RxChannelSettings", "StreamingSettings", "ChannelSettings"]
+  }

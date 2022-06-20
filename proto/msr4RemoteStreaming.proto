@@ -1,0 +1,11 @@
+syntax = "proto3";
+ 
+package RsIcpxGrpcService;
+import "networkStreamingSettings.proto";
+import "errors.proto";
+import "empty.proto";
+ 
+service MSR4RemoteStreaming {
+    rpc getNetworkStreamingSettings(Empty) returns (NetworkStreamingSettings){}
+    rpc setNetworkStreamingSettings(NetworkStreamingSetting) returns (ErrorMessage) {}
+}

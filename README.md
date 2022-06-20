@@ -1,92 +1,138 @@
-# icpx.sw.iq_client
+# rs-jerry-driver
 
-An example IQ Streaming client for use with streaming devices, like the MSR4
+An example IQ Streaming client for use with streaming devices, like the MSR4.
 
-## Getting started
+## Hardware
 
-To make it easy for you to get started with GitLab, here's a list of recommended next steps.
+- system with SR-IOV support
+- ixgbe driver
 
-Already a pro? Just edit this README.md and make it your own. Want to make it easy? [Use the template at the bottom](#editing-this-readme)!
+As of writing this, only Intel® Ethernet Controller X520 and Intel® Ethernet Controller X710 have been tested and used. Though it should work with other NICs aswell provided the system is set up correctly according to the RS Jerry Setup Repo
 
-## Add your files
+## Software
 
-- [ ] [Create](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#create-a-file) or [upload](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#upload-a-file) files
-- [ ] [Add files using the command line](https://docs.gitlab.com/ee/gitlab-basics/add-file.html#add-a-file-using-the-command-line) or push an existing Git repository with the following command:
+The following versions are required to build and run:
+| Name  | Version | Purpose | Get It |
+| --- | --- | --- | --- |
+| C++  | >17  | Compiling | --- |
+| CMake  | >3.14  | Building | `sudo apt-get install cmake` |
+| gRPC  | 1.44.0  | Configure MSR4 | [Quickstart](https://grpc.io/docs/languages/cpp/quickstart/) |
+| jsoncpp  | 1.7.4 | Alternative to configure MSR4 | `sudo apt-get install libjsoncpp-dev` |
+| DPDK  | 21.02.0  | Speed | [Download](https://core.dpdk.org/download/) + [Building](https://doc.dpdk.org/guides/linux_gsg/build_dpdk.html) |
+| pkg-config  | 0.29.1  | Finding DPDK | `sudo apt-get install pkg-config` |
+| gTest (optional)  | 1.10.0  | Running UnitTests | `sudo apt-get install libgtest-dev` |
+
+## Unit Tests
+
+The unit tests are using the [GoogleTest Framework](https://github.com/google/googletest).
+
+To enable/disable building the unit tests, switch the option `BUILD_TESTS` to ON/OFF in the [CMakeLists.txt](CMakeLists.txt).
+
+## Preperation
+This project requires the system to be set up correctly according to the RS Jerry Setup Repo.
+
+## Build & Install
 
 ```
-cd existing_repo
-git remote add origin https://code.rsint.net/8SI-EU/8SIN/icpx/icpx.sw.iq_client.git
-git branch -M main
-git push -uf origin main
+mkdir build && cd build
+cmake -DCMAKE_BUILD_TYPE=Release ..
+make
+sudo make install
 ```
-
-## Integrate with your tools
-
-- [ ] [Set up project integrations](https://code.rsint.net/8SI-EU/8SIN/icpx/icpx.sw.iq_client/-/settings/integrations)
-
-## Collaborate with your team
-
-- [ ] [Invite team members and collaborators](https://docs.gitlab.com/ee/user/project/members/)
-- [ ] [Create a new merge request](https://docs.gitlab.com/ee/user/project/merge_requests/creating_merge_requests.html)
-- [ ] [Automatically close issues from merge requests](https://docs.gitlab.com/ee/user/project/issues/managing_issues.html#closing-issues-automatically)
-- [ ] [Enable merge request approvals](https://docs.gitlab.com/ee/user/project/merge_requests/approvals/)
-- [ ] [Automatically merge when pipeline succeeds](https://docs.gitlab.com/ee/user/project/merge_requests/merge_when_pipeline_succeeds.html)
-
-## Test and Deploy
-
-Use the built-in continuous integration in GitLab.
-
-- [ ] [Get started with GitLab CI/CD](https://docs.gitlab.com/ee/ci/quick_start/index.html)
-- [ ] [Analyze your code for known vulnerabilities with Static Application Security Testing(SAST)](https://docs.gitlab.com/ee/user/application_security/sast/)
-- [ ] [Deploy to Kubernetes, Amazon EC2, or Amazon ECS using Auto Deploy](https://docs.gitlab.com/ee/topics/autodevops/requirements.html)
-- [ ] [Use pull-based deployments for improved Kubernetes management](https://docs.gitlab.com/ee/user/clusters/agent/)
-- [ ] [Set up protected environments](https://docs.gitlab.com/ee/ci/environments/protected_environments.html)
-
-***
-
-# Editing this README
-
-When you're ready to make this README your own, just edit this file and use the handy template below (or feel free to structure it however you want - this is just a starting point!).  Thank you to [makeareadme.com](https://www.makeareadme.com/) for this template.
-
-## Suggestions for a good README
-Every project is different, so consider which of these sections apply to yours. The sections used in the template are suggestions for most open source projects. Also keep in mind that while a README can be too long and detailed, too long is better than too short. If you think your README is too long, consider utilizing another form of documentation rather than cutting out information.
-
-## Name
-Choose a self-explaining name for your project.
-
-## Description
-Let people know what your project can do specifically. Provide context and add a link to any reference visitors might be unfamiliar with. A list of Features or a Background subsection can also be added here. If there are alternatives to your project, this is a good place to list differentiating factors.
-
-## Badges
-On some READMEs, you may see small images that convey metadata, such as whether or not all the tests are passing for the project. You can use Shields to add some to your README. Many services also have instructions for adding a badge.
-
-## Visuals
-Depending on what you are making, it can be a good idea to include screenshots or even a video (you'll frequently see GIFs rather than actual videos). Tools like ttygif can help, but check out Asciinema for a more sophisticated method.
-
-## Installation
-Within a particular ecosystem, there may be a common way of installing things, such as using Yarn, NuGet, or Homebrew. However, consider the possibility that whoever is reading your README is a novice and would like more guidance. Listing specific steps helps remove ambiguity and gets people to using your project as quickly as possible. If it only runs in a specific context like a particular programming language version or operating system or has dependencies that have to be installed manually, also add a Requirements subsection.
+This installs the library `libjerryDriver.a` into `/usr/local/lib` as well as the headers into `/usr/local/include/`.
 
 ## Usage
-Use examples liberally, and show the expected output if you can. It's helpful to have inline the smallest example of usage that you can demonstrate, while providing links to more sophisticated examples if they are too long to reasonably include in the README.
 
-## Support
-Tell people where they can go to for help. It can be any combination of an issue tracker, a chat room, an email address, etc.
+After the installation you can `#include <iqClient/iqClient.h>` in your project and use its contents.
 
-## Roadmap
-If you have ideas for releases in the future, it is a good idea to list them in the README.
+### IqClient
+The common approach is to instantiate a new empty iqClient and modifying it afterwards to your needs.
 
-## Contributing
-State if you are open to contributions and what your requirements are for accepting them.
+_Example Code:_
+```c++
+std::unique_ptr<IqClient> iqclient = std::make_unique<IqClient>();
+```
 
-For people who want to make changes to your project, it's helpful to have some documentation on how to get started. Perhaps there is a script that they should run or some environment variables that they need to set. Make these steps explicit. These instructions could also be useful to your future self.
+### Configure MSR4 via gRPC
+Using gRPC requires you to first log into the MSR4 with your given credentials.
 
-You can also document commands to lint the code or run tests. These steps help to ensure high code quality and reduce the likelihood that the changes inadvertently break something. Having instructions for running tests is especially helpful if it requires external setup, such as starting a Selenium server for testing in a browser.
+_Example Code: Login_
+```c++
+iqClient->SetMSR4Ip("some.device.net");
+iqClient->SetMSR4Credentials("user", "password");
+iqClient->MSR4Login();
+```
 
-## Authors and acknowledgment
-Show your appreciation to those who have contributed to the project.
+Setting single values in the MSR4 is as simple as calling the corresponding function of the `iqClient`.
+The return value of Set-Functions is usually an ErrorMessage. See the errors proto file for further information.
 
-## License
-For open source projects, say how it is licensed.
+_Example Code: gRPC and Errors_
+```c++
+iqClient->SetDestinationAddress("127.0.0.1");
+RsIcpxGrpcService::ErrorMessage err = iqClient->SetSatFrequencyHz(1500000000);
+if(err.errorcode() != 0)
+      throw InvalidValueError(err.errormessage());
+```
 
-## Project status
-If you have run out of energy or time for your project, put a note at the top of the README saying that development has slowed down or stopped completely. Someone may choose to fork your project or volunteer to step in as a maintainer or owner, allowing your project to keep going. You can also make an explicit request for maintainers.
+Another approach to configure the MSR4 is to specify settings in a `.json` file and loading it. Further details on `.json` can be found in the `configFiles/README.md` as well as an `example.json` and `schema.json`.
+
+_Example Code: JSON_
+```c++
+iqClient->SetMSR4ByJson("my/awesome/path/to/example.json");
+```
+
+### Getting Samples (via DPDK)
+The created VFs from the RS Jerry Setup Repo are enumerated in order of creation starting at 0. 
+The VF to listen to needs to be specified.
+The incoming samples can be divided by a norm. The norm defaults to 1.
+
+_Example Code: Specify DPDK Settings_
+```c++
+iqClient->SetPortID(0);
+iqClient->SetNorm(10);
+```
+
+After having everything set up correctly, start DPDK and the MSR4 IQ-streamer.
+
+Note: MSR4 settings can only be changed while the IQ-streamer is not streaming, so make sure to call `iqClient->SetStreamingStatus(false);` beforehand.
+
+_Example Code: Starting_
+```c++
+iqClient->SetupDpdkSource();
+iqClient->SetStreamingStatus(true);
+```
+
+Now calling `int GetSamples(int number_of_samples, std::complex<float> *samples)` retrievs a maximum of `number_of_samples` items into `samples`, and returns the actual number of items succesfully stored in `samples`.
+```c++
+int number_of_samples       = 10;
+std::complex<float> *output = (std::complex<float> *) malloc(sizeof(std::complex<float>) * number_of_samples);
+int nsamples                = 0;
+
+nsamples = iqClient->GetSamples(number_of_samples, output);
+```
+`GetSamples(...)` can be and probably should be called in an endless loop to keep the samples coming.
+
+
+After you are done, you should call
+```c++
+iqClient->TeardownDpdkSource();
+```
+to free the memory.
+
+**Please note:**\
+Due to how dpdk works, `SetupDpdkSource()` (which calls `rte_eal_init()`) can only be called **once per process, even after `TeardownDpdkSource()`** since calling `rte_eal_cleanup()` internally does not shutdown dpdk "cleanly".
+Further information on this: [Issue#263](https://github.com/intel-go/nff-go/issues/263).
+
+In essence:
+> [ rte_eal_cleanup() ] was added as it was required to release hugepage memory from secondary processes when shutting down. In the long term, it is intended to provide a "clean" shutdown of all of DPDK resources, however it is not that today. In current code, rte_eal_init() can still only be called once per process.
+
+
+## Examples
+You can find more examples on how to use the iqClient either
+- in the unit tests directly or
+- in a little more elaborated example using gnuradio as receiver in the rs-jerry-gnuradio repo
+
+## Troubleshooting
+
+**Problem:** The MSR4 sends HRZR packets to my device and the packets are visible in `watch -n 0.5 -d 'ethtool -S <myDevice> | grep -v ": 0"'` but I do not get any samples by calling `GetSamples(...)`.\
+**Solution:** This usually means the packets are not send to the VF. When using the Intel® Ethernet Controller X710 make sure the latest compatible [i40e Driver](https://www.intel.com/content/www/us/en/download/18026/intel-network-adapter-driver-for-pcie-40-gigabit-ethernet-network-connections-under-linux.html) is installed for your system.

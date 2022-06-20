@@ -1,0 +1,13 @@
+syntax = "proto3";
+ 
+package RsIcpxGrpcService;  
+ 
+message DeviceInfo {
+  string version = 1;
+  string manufacturer = 2;
+  string device = 3;
+  string serial = 4;
+  double minFrequency_Hz = 5;
+  double maxFrequency_Hz = 6;
+  string product = 7;
+}

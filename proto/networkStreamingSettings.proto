@@ -1,0 +1,21 @@
+syntax = "proto3";
+ 
+package RsIcpxGrpcService;
+ 
+enum NetworkStreamingInterface {
+    SFP3 = 0;
+    SFP4 = 1;
+    SFP5 = 2;
+    SFP6 = 3;
+}
+ 
+message NetworkStreamingSetting {
+    string ipAddress = 1;
+    string subnetMask = 2;
+    string gateway = 3;
+    NetworkStreamingInterface sfpInterface = 4;
+}
+ 
+message NetworkStreamingSettings {
+    repeated NetworkStreamingSetting setting = 1;
+}

@@ -1,0 +1,16 @@
+syntax = "proto3";
+ 
+package RsIcpxGrpcService;
+ 
+message Channel {
+    Channels id = 1;
+}
+ 
+enum Channels {
+    Rx1 = 0;
+    Rx2 = 1;
+    Rx3 = 2;
+    Rx4 = 3;
+    Tx1 = 4;
+    Tx2 = 5;
+}

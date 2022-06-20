@@ -1,0 +1,15 @@
+syntax = "proto3";
+ 
+package RsIcpxGrpcService;
+import "streamingSettings.proto";
+import "streamingStatus.proto";
+import "errors.proto";
+import "empty.proto";
+import "ready.proto";
+ 
+service MSR4RemoteStreamingFromMSR4 {
+    rpc getUDPSetting(Empty) returns (UdpSetting) {}
+    rpc getUDPStatus(Empty) returns (UdpStatus) {}
+    rpc isUDPStatusReady(Empty) returns (ReadyMessage) {}
+    rpc setUDPSetting(UdpSetting) returns (ErrorMessage) {}
+}

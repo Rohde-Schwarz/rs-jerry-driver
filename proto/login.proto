@@ -1,0 +1,19 @@
+syntax = "proto3";
+ 
+package RsIcpxGrpcService;
+import "deviceInfo.proto";
+import "empty.proto";
+ 
+message Credentials {
+    string name = 1;
+    string password = 2;
+}
+ 
+message JsonWebToken {
+    string token = 1;
+}
+ 
+service MSR4Login {
+    rpc login(Credentials) returns (JsonWebToken) {}   
+    rpc getDeviceInfo(Empty) returns (DeviceInfo){}
+}

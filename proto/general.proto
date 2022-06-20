@@ -1,0 +1,21 @@
+syntax = "proto3";
+ 
+package RsIcpxGrpcService;
+import "errors.proto";
+import "empty.proto";
+ 
+enum ClkSource {
+  INTERNAL = 0;
+  EXTERNAL = 1;
+  UNDEFINED = 2;
+}
+ 
+message ClockSource {
+  ClkSource source = 1;
+}
+ 
+service MSR4GeneralSettings {
+    rpc getClockSource(Empty) returns (ClockSource) {}
+    rpc setClockSource(ClockSource) returns (ErrorMessage) {}
+    rpc reboot(Empty) returns (ErrorMessage) {}
+}

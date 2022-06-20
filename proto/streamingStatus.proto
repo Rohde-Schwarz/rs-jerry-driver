@@ -1,0 +1,34 @@
+syntax = "proto3";
+ 
+package RsIcpxGrpcService;
+ 
+message UdpStatus {
+    double datarate_gbits = 1;
+    StreamStatusBase statusBase = 2;
+}
+ 
+message StreamStatusBase {
+    bool isStreaming = 1;
+    StreamError error = 2;
+}
+ 
+message StreamError {
+    StreamErrors error = 1;
+}
+ 
+enum StreamErrors {
+    OK = 0;
+    SFPNotPresent = 1;
+    ConnectionPartyDidNotRespond = 2;
+    SFPLinkDown = 3;
+}
+ 
+message SsdStatus {
+    double totalSpaceMB = 1;
+    double spaceLeftMB = 2;
+    StreamStatusBase statusBase = 3;
+}
+ 
+message TxStatus {
+    StreamStatusBase statusBase = 1;
+}

@@ -1,0 +1,8 @@
+syntax = "proto3";
+ 
+package RsIcpxGrpcService;
+ 
+enum Protocols {
+    AMMOS = 0;
+    HRZR = 1;
+}
