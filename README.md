@@ -28,6 +28,7 @@ The unit tests are using the [GoogleTest Framework](https://github.com/google/go
 
 To enable/disable building the unit tests, switch the option `BUILD_TESTS` to ON/OFF in the [CMakeLists.txt](CMakeLists.txt).
 
+
 ## Preperation
 This project requires the system to be set up correctly according to the RS Jerry Setup Repo.
 
@@ -136,3 +137,308 @@ You can find more examples on how to use the iqClient either
 
 **Problem:** The MSR4 sends HRZR packets to my device and the packets are visible in `watch -n 0.5 -d 'ethtool -S <myDevice> | grep -v ": 0"'` but I do not get any samples by calling `GetSamples(...)`.\
 **Solution:** This usually means the packets are not send to the VF. When using the Intel® Ethernet Controller X710 make sure the latest compatible [i40e Driver](https://www.intel.com/content/www/us/en/download/18026/intel-network-adapter-driver-for-pcie-40-gigabit-ethernet-network-connections-under-linux.html) is installed for your system.
+
+## Sidenote: HRZR
+### Header
+<table border="1">
+  <tr>
+    <th>Byte</th>
+    <th scope="col" colspan="8" style="text-align: center">0</th>
+    <th scope="col" colspan="8" style="text-align: center">1</th>
+    <th scope="col" colspan="8" style="text-align: center">2</th>
+    <th scope="col" colspan="8" style="text-align: center">3</th>
+  </tr>
+  <tr>
+    <!-- The following eight cells will appear under the same header -->
+    <th>Bit</td>
+    <th>0</th>
+    <th>1</t>
+    <th>2</th>
+    <th>3</th>
+    <th>4</th>
+    <th>5</th>
+    <th>6</th>
+    <th>7</th>
+    <th>0</th>
+    <th>1</th>
+    <th>2</th>
+    <th>3</th>
+    <th>4</th>
+    <th>5</th>
+    <th>6</th>
+    <th>7</th>
+    <th>0</th>
+    <th>1</th>
+    <th>2</th>
+    <th>3</th>
+    <th>4</th>
+    <th>5</th>
+    <th>6</th>
+    <th>7</th>
+    <th>0</th>
+    <th>1</th>
+    <th>2</th>
+    <th>3</th>
+    <th>4</th>
+    <th>5</th>
+    <th>6</th>
+    <th>7</th>
+  </tr>
+  <tr>
+    <th scope="row" rowspan="3" style="text-align: center">Content</th>
+    <td scope="col" colspan="4" style="text-align: center">Control</td>
+    <td scope="col" colspan="12" style="text-align: center">Sequence number</td>
+    <td scope="col" colspan="16" style="text-align: center">Total packet length (including header)</td>
+  </tr>
+  <tr>
+    <td scope="col" colspan="32" style="text-align: center">Receiver Address</td>
+  </tr>
+  <tr>
+    <td scope="col" colspan="32" style="text-align: center">Data</td>
+  </tr>
+</table>
+
+### Control
+<table border="1">
+  <tr>
+    <th scope="col" colspan="8">Bit 0</th>
+    <th scope="col" colspan="8">Bit 1</th>
+    <th scope="col" colspan="8">Bit 2</th>
+    <th scope="col" colspan="8">Bit 3</th>
+    <th scope="col" colspan="8">Packet type</th>
+  </tr>
+  <tr>
+    <td scope="col" colspan="8">0</td>
+    <td scope="col" colspan="8">0</td>
+    <td scope="col" colspan="8">x</td>
+    <td scope="col" colspan="8">0</td>
+    <td scope="col" colspan="8">Data</td>
+  </tr>
+  <tr>
+    <td scope="col" colspan="8">0</td>
+    <td scope="col" colspan="8">1</td>
+    <td scope="col" colspan="8">x</td>
+    <td scope="col" colspan="8">1</td>
+    <td scope="col" colspan="8">Metadata</td>
+  </tr>
+</table>
+
+### Payload
+Transmission in little-endian format, i.e. the least significant byte first. A sample consists of I and Q, each with 16 bits per component, i.e. a total of 32 bits per sample. I always comes first, then Q.
+<table border="1">
+<tr>
+    <th>Byte</th>
+    <th scope="col" colspan="8" style="text-align: center">0</th>
+    <th scope="col" colspan="8" style="text-align: center">1</th>
+    <th scope="col" colspan="8" style="text-align: center">2</th>
+    <th scope="col" colspan="8" style="text-align: center">3</th>
+  </tr>
+  <tr>
+    <th>Bit</th>
+    <th>0</th>
+    <th>1</th>
+    <th>2</th>
+    <th>3</th>
+    <th>4</th>
+    <th>5</th>
+    <th>6</th>
+    <th>7</th>
+    <th>0</th>
+    <th>1</th>
+    <th>2</th>
+    <th>3</th>
+    <th>4</th>
+    <th>5</th>
+    <th>6</th>
+    <th>7</th>
+    <th>0</th>
+    <th>1</th>
+    <th>2</th>
+    <th>3</th>
+    <th>4</th>
+    <th>5</th>
+    <th>6</th>
+    <th>7</th>
+    <th>0</th>
+    <th>1</th>
+    <th>2</th>
+    <th>3</th>
+    <th>4</th>
+    <th>5</th>
+    <th>6</th>
+    <th>7</th>
+  </tr>
+  <tr>
+    <th scope="row" rowspan="3" style="text-align: center">Content</th>
+    <td scope="col" colspan="16" style="text-align: center">I</td>
+    <td scope="col" colspan="16" style="text-align: center">Q</td>
+  </tr>
+  <tr>
+    <td scope="col" colspan="16" style="text-align: center">I</td>
+    <td scope="col" colspan="16" style="text-align: center">Q</td>
+  </tr>
+  <tr>
+    <td scope="col" colspan="16" style="text-align: center">...</td>
+    <td scope="col" colspan="16" style="text-align: center">...</td>
+  </tr>
+</table>
+
+### Metadata
+Metadata is sent once per second.
+<table border="1">
+  <tr>
+    <th>Byte</th>
+    <th scope="col" colspan="8" style="text-align: center">0</th>
+    <th scope="col" colspan="8" style="text-align: center">1</th>
+    <th scope="col" colspan="8" style="text-align: center">2</th>
+    <th scope="col" colspan="8" style="text-align: center">3</th>
+  </tr>
+  <tr>
+    <th>Bit</th>
+    <th>0</th>
+    <th>1</th>
+    <th>2</th>
+    <th>3</th>
+    <th>4</th>
+    <th>5</th>
+    <th>6</th>
+    <th>7</th>
+    <th>0</th>
+    <th>1</th>
+    <th>2</th>
+    <th>3</th>
+    <th>4</th>
+    <th>5</th>
+    <th>6</th>
+    <th>7</th>
+    <th>0</th>
+    <th>1</th>
+    <th>2</th>
+    <th>3</th>
+    <th>4</th>
+    <th>5</th>
+    <th>6</th>
+    <th>7</th>
+    <th>0</th>
+    <th>1</th>
+    <th>2</th>
+    <th>3</th>
+    <th>4</th>
+    <th>5</th>
+    <th>6</th>
+    <th>7</th>
+  </tr>
+  <tr>
+    <th scope="row" rowspan="10" style="text-align: center">Content</th>
+    <td scope="col" colspan="4" style="text-align: center">Version</td>
+    <td scope="col" colspan="4" style="text-align: center">Time sync source</td>
+    <td scope="col" colspan="2" style="text-align: center">Clock sync source</td>
+    <td scope="col" colspan="22" style="text-align: center">Zero Padding</td>
+  </tr>
+  <tr>
+    <td scope="col" colspan="64" style="text-align: center">Zero Padding</td>
+  </tr>
+  <tr>
+    <td scope="col" colspan="64" style="text-align: center">Unix timestamp in nanosecond-precision (MSBs) *</td>
+  </tr>
+  <tr>
+    <td scope="col" colspan="64" style="text-align: center">Unix timestamp in nanosecond-precision (LSBs) *</td>
+  </tr>
+  <tr>
+    <td scope="col" colspan="64" style="text-align: center">Sample frequency</td>
+  </tr>
+  <tr>
+    <td scope="col" colspan="64" style="text-align: center">Center frequency (max 4.2 GHz)</td>
+  </tr>
+  <tr>
+    <td scope="col" colspan="64" style="text-align: center">Preamp gain float (IEEE 754) **</td>
+  </tr>
+  <tr>
+    <td scope="col" colspan="64" style="text-align: center">ISO 6709 latitude*** in degree float (IEEE 754)</td>
+  </tr>
+  <tr>
+    <td scope="col" colspan="64" style="text-align: center">ISO 6709 longitude*** in degree float (IEEE 754)</td>
+  </tr>
+  <tr>
+    <td scope="col" colspan="64" style="text-align: center">ISO 6709 elevation*** in meter float (IEEE 754)</td>
+  </tr>
+</table>
+
+\* unix timestap in nanoseconds since 01.01.1970, 0:00  
+** defines the total 200MHz channel power correction value in dB  
+*** the default value or no GPS fix is available: -256.0
+
+### Version
+Current: 0000
+
+### Time Sync Source
+How we get the timestamps:
+
+If GPS or Network is selected but not synchronized (no GPS fix, no connection to NTP Master), internal RTC Time should be transmitted as timestamp and bit 3 should be zero.
+<table border="1">
+  <tr>
+    <th scope="col" colspan="8">Bit 0</th>
+    <th scope="col" colspan="8">Bit 1</th>
+    <th scope="col" colspan="8">Bit 2</th>
+    <th scope="col" colspan="8">Bit 3 - SYNCED</th>
+    <th scope="col" colspan="8">Packet type</th>
+  </tr>
+  <tr>
+    <td scope="col" colspan="8">0</td>
+    <td scope="col" colspan="8">0</td>
+    <td scope="col" colspan="8">x</td>
+    <td scope="col" colspan="8">0</td>
+    <td scope="col" colspan="8">No time sync</td>
+  </tr>
+  <tr>
+    <td scope="col" colspan="8">1</td>
+    <td scope="col" colspan="8">0</td>
+    <td scope="col" colspan="8">x</td>
+    <td scope="col" colspan="8">0/1</td>
+    <td scope="col" colspan="8">GPS</td>
+  </tr>
+  <tr>
+    <td scope="col" colspan="8">0</td>
+    <td scope="col" colspan="8">1</td>
+    <td scope="col" colspan="8">x</td>
+    <td scope="col" colspan="8">0/1</td>
+    <td scope="col" colspan="8">Network</td>
+  </tr>
+  <tr>
+    <td scope="col" colspan="8">1</td>
+    <td scope="col" colspan="8">1</td>
+    <td scope="col" colspan="8">x</td>
+    <td scope="col" colspan="8">x</td>
+    <td scope="col" colspan="8">Unknown</td>
+  </tr> 
+</table>
+
+### Clock Sync Sources
+How we synchronize:
+<table border="1">
+  <tr>
+    <th scope="col" colspan="8">Bit 0</th>
+    <th scope="col" colspan="8">Bit 1</th>
+    <th scope="col" colspan="8">Packet type</th>
+  </tr>
+  <tr>
+    <td scope="col" colspan="8">0</td>
+    <td scope="col" colspan="8">0</td>
+    <td scope="col" colspan="8">Internal clock</td>
+  </tr>
+  <tr>
+    <td scope="col" colspan="8">1</td>
+    <td scope="col" colspan="8">0</td>
+    <td scope="col" colspan="8">External clock</td>
+  </tr>
+  <tr>
+    <td scope="col" colspan="8">0</td>
+    <td scope="col" colspan="8">1</td>
+    <td scope="col" colspan="8">Unknown</td>
+  </tr>
+  <tr>
+    <td scope="col" colspan="8">1</td>
+    <td scope="col" colspan="8">1</td>
+    <td scope="col" colspan="8">Unknown</td>
+  </tr>
+</table>
