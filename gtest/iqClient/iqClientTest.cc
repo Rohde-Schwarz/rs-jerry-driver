@@ -1,3 +1,23 @@
+/*
+MIT License 
+Copyright (c) 2022 Rohde & Schwarz INRADIOS GmbH 
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+*/
+
 #include "iqClient/grpcClient.h"
 #include "iqClient/iqClient.h"
 
@@ -16,6 +36,28 @@ protected:
       iqClient->SetMSR4Ip("some.device.net");
       iqClient->SetMSR4Credentials("user", "password");
       return iqClient->MSR4Login();
+   }
+
+   void ReceivePackets(std::vector<std::vector<std::complex<float>>> *payload, std::vector<int> *nsamples_ptr)
+   {
+      iqClient->SetMSR4ByJson("full/path/to/rs-jerry-driver/configFiles/example.json");
+
+      iqClient->SetPortID(0);
+      iqClient->SetNorm(10000);
+      iqClient->SetupDpdkSource();
+
+      iqClient->SetStreamingStatus(true);
+
+      int itr = 0;
+      while (itr < nsamples_ptr->size())
+      {
+         nsamples_ptr->at(itr) = iqClient->GetSamples(3660, payload->at(itr).data());
+         if (nsamples_ptr->at(itr) > 0)
+            itr++;
+      }
+
+      iqClient->SetStreamingStatus(false);
+      iqClient->TeardownDpdkSource();
    }
 };
 
@@ -64,7 +106,7 @@ TEST_F(IqClientTest, CanSetChannelSettings)
 
 TEST_F(IqClientTest, CanSetMSR4ByJson)
 {
-   iqClient->SetMSR4ByJson("path/to/example.json");
+   iqClient->SetMSR4ByJson("full/path/to/rs-jerry-driver/configFiles/example.json");
 
    EXPECT_EQ(iqClient->GetPort(), 5001);
    EXPECT_EQ(iqClient->GetDestinationAddress(), "127.0.0.1");
@@ -83,44 +125,53 @@ TEST_F(IqClientTest, CanSetDPDKSettings)
    EXPECT_EQ(iqClient->GetNorm(), 10);
 }
 
-TEST_F(IqClientTest, DISABLED_GetSamples)
-{
+TEST_F(IqClientTest, DISABLED_DumpHrzr){
    iqClient->SetMSR4ByJson("full/path/to/rs-jerry-driver/configFiles/example.json");
 
-   int number_of_samples       = 1514;
-   std::complex<float> *output = (std::complex<float> *) malloc(sizeof(std::complex<float>) * number_of_samples);
-
+   int number_of_samples = 4096;
+   
+   iqClient->SetDumpMode(true);
+   iqClient->SetBandwidthBySampleRate(10000000);
    iqClient->SetPortID(0);
+   iqClient->SetNorm(10000);
    iqClient->SetupDpdkSource();
 
-   iqClient->SetStreamingStatus(true);
+   std::complex<float> *output = (std::complex<float> *)malloc(sizeof(std::complex<float>)*number_of_samples);
 
-   int nsamples = 0;
-   while (true) {
-      nsamples = iqClient->GetSamples(number_of_samples, output);
+   iqClient->SetStreamingStatus(true);
+   while(!((DpdkSource*)iqClient->GetSource())->shouldQuit()) {
+      iqClient->GetSamples(number_of_samples, output);
    }
+   iqClient->SetStreamingStatus(false);
 
    free(output);
-
    iqClient->TeardownDpdkSource();
 }
 
-TEST_F(IqClientTest, DISABLED_CanWriteSamplesToFile)
+TEST_F(IqClientTest, DISABLED_GetSamples)
 {
-   iqClient->SetupDpdkSource();
+   int number_of_packets = 100;
 
-   int number_of_samples       = 10;
-   std::complex<float> *output = (std::complex<float> *) malloc(sizeof(std::complex<float>) * number_of_samples);
+   std::vector<std::vector<std::complex<float>>> payload(number_of_packets, std::vector<std::complex<float>>(4032));
+   std::vector<int>payload_size(number_of_packets);
 
-   std::fstream fs("binarysamples", std::fstream::out | std::fstream::binary);
+   ReceivePackets(&payload, &payload_size);
+}
 
-   int nsamples = 0;
-   while (nsamples < 10) { nsamples = iqClient->GetSamples(number_of_samples, output); }
+TEST_F(IqClientTest, WriteSamplesToFile)
+{
+   int number_of_packets = 100;
 
-   for (int i = 0; i < number_of_samples; i++) { fs << output[i] << std::endl; }
-   fs.close();
+   std::vector<std::vector<std::complex<float>>> payload(number_of_packets, std::vector<std::complex<float>>(4032));
+   std::vector<int> payload_size(number_of_packets);
 
-   free(output);
+   ReceivePackets(&payload, &payload_size);
 
-   iqClient->TeardownDpdkSource();
+   std::ofstream fs("binarysamples.bin", std::fstream::binary);
+   for (int i = 0; i < number_of_packets; i++)
+   {
+      for (int j = 0; j < payload_size[i]; j++) {
+         fs.write(reinterpret_cast<const char *>(&payload[i][j]), sizeof(std::complex<float>));
+      }
+   }
 }

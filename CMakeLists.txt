@@ -14,8 +14,9 @@ add_definitions("-std=c++17")
 add_definitions(`pkg-config --libs --cflags protobuf grpc++`)
 add_definitions(`pkg-config --libs --cflags libdpdk`)
 
-set(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} -fPIC")
-set(CMAKE_C_FLAGS  "${CMAKE_C_FLAGS} -fPIC")
+set(CMAKE_BUILD_TYPE Release)
+set(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} -fPIC -O3")
+set(CMAKE_C_FLAGS  "${CMAKE_C_FLAGS} -fPIC -O3")
 
 OPTION(BUILD_TESTS "Build unit tests" ON)
 

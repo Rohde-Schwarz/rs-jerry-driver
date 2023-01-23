@@ -20,12 +20,13 @@
 
 #include <complex>
 #include <memory>
+#include <vector>
 
 class DpdkSource : public ILinuxSource {
 
 public:
+   DpdkSource(int dpdk_port_id, uint16_t udp_rx_port, float norm, bool dump_mode = false);
    ~DpdkSource() override;
-   DpdkSource(int dpdk_port_id, uint16_t udp_rx_port, float norm);
    int getSamples(int number_of_samples, std::complex<float> *samples) override;
 
    bool shouldQuit() const { return quit; };
@@ -35,14 +36,24 @@ public:
    struct rte_mempool *getPool() { return mbuf_pool; };
 
 private:
-   void setupPort();
    void setupDpdk();
-   void assertLinkStatus();
-   static int RXThread(DpdkSource *dpdkSource);
+   void setupEal(std::vector<const char *> argv);
+   void checkAvailablePorts();
+   void allocateMemPool();
 
-   void setupRing();
-   void startRXThread();
+   void setupPort();
+   void configureRxConf(rte_eth_rxconf &rxq_conf);
+   rte_eth_dev_info getDevInfo();
+   rte_eth_conf getPortConf(rte_eth_dev_info &dev_info);
+   void configurePort(rte_eth_conf &port_conf);
+   void setupRxQueues(rte_eth_rxconf &rxq_conf);
+   void enablePromiscuousMode();
+   void startPort();
+   void assertLinkStatus();
+
+   static int RXThread(DpdkSource *dpdkSource);
    void stopRXThread();
+   static int dumpThread(DpdkSource *dpdkSource);
    bool isValidPacketType(HrzrHeaderParser::PacketType type);
 
    std::unique_ptr<HrzrParser> hrzr_parser;
@@ -50,6 +61,8 @@ private:
    int dpdk_port_id;
    uint16_t udp_rx_port;
    bool quit;
+   uint64_t total_packets;
+   uint64_t total_packets_lost;
 
    struct udp_hdr {
       uint16_t src_port;
