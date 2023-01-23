@@ -54,6 +54,17 @@ public:
 
 #pragma endregion MSR4
 
+   // WARNING
+   // For testing purpose only - REALLY bad performance at times
+   // Dumps 3seconds of hex-encoded data to a plain text file(size will be ~180M)
+   void SetDumpMode(bool value){
+      dump_mode = value;
+   }
+   bool GetDumpMode()
+   {
+      return dump_mode;
+   }
+
    void SetPortID(int port_id);
    int GetPortID()
    {
@@ -85,7 +96,7 @@ private:
    GrpcClient::MSR4Channel msr4_channel;
 
    int port_id;
-
+   bool dump_mode;
    float norm;
 
    ILinuxSource *sample_source;
