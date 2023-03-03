@@ -31,6 +31,7 @@ add_subdirectory(src/dpdkSource)
 add_subdirectory(src/iqClient)
 add_subdirectory(src/udpSource)
 add_subdirectory(src/grpcClient)
+add_subdirectory(src/udpTransmitter)
 
 set_source_files_properties(${ALL_PROTO_SOURCES} PROPERTIES GENERATED TRUE)
 
