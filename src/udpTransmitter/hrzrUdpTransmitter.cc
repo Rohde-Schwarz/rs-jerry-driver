@@ -29,7 +29,7 @@ void HrzrUdpTransmitter::openSocketAndConnect()
 
 void HrzrUdpTransmitter::sendPacket(std::vector<int16_t> samples)
 {
-    HrzrHeader header = makeHrzrHeader(samples.size());
+    HrzrHeader header = makeHrzrHeader(samples.size()/2);
     HrzrPayload payload = makeHrzrPayload(samples);
     HrzrPacket packet = makeHrzrPacket(header, payload);
     send(my_sock, (const void*)&packet, packet.total_pck_len, 0);
@@ -43,7 +43,7 @@ HrzrUdpTransmitter::HrzrHeader HrzrUdpTransmitter::makeHrzrHeader(int num_sample
     header.control = 0;
     header.sequence_number = current_sequence_number;
     header.source_id = 0;
-    header.total_packt_length = 8 + num_samples * definitions::SAMPLE_SIZE_IN_BYTE * 2; // 8 byte hrzr; see definitions.h
+    header.total_packet_length = 8 + num_samples * definitions::SAMPLE_SIZE_IN_BYTE; // 8 byte hrzr; see definitions.h
     return header;
 }
 
@@ -56,7 +56,7 @@ HrzrUdpTransmitter::HrzrPayload HrzrUdpTransmitter::makeHrzrPayload(std::vector<
 HrzrUdpTransmitter::HrzrPacket HrzrUdpTransmitter::makeHrzrPacket(HrzrHeader header, HrzrPayload payload){
     HrzrPacket packet;
     packet.ctrl_and_seq_nb = (static_cast<uint16_t>(header.control) << 12) | header.sequence_number;
-    packet.total_pck_len = header.total_packt_length;
+    packet.total_pck_len = header.total_packet_length;
     packet.src_id = header.source_id;
     packet.samples[payload.samples.size()];
     std::memcpy(packet.samples, payload.samples.data(), sizeof(int16_t)*payload.samples.size());

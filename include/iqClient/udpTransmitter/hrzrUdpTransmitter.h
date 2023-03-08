@@ -24,7 +24,7 @@ private:
   struct HrzrHeader{
     uint8_t control;
     uint16_t sequence_number;
-    uint16_t total_packt_length;
+    uint16_t total_packet_length;
     uint32_t source_id;
   };
 
@@ -36,7 +36,7 @@ private:
     uint16_t ctrl_and_seq_nb;
     uint16_t total_pck_len;
     uint32_t src_id;
-    int16_t samples[definitions::SAMPLES_PER_PACKET];
+    int16_t samples[definitions::SAMPLES_PER_PACKET*2];
   }__attribute__( ( packed ) );
 
   struct sockaddr_in local;

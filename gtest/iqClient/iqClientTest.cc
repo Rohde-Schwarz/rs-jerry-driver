@@ -191,18 +191,18 @@ TEST_F(IqClientTest, SendPayload)
    EXPECT_EQ(destSockAddr.sin_family, AF_INET);
    EXPECT_EQ(destSockAddr.sin_port, htons(5001));
 
-   int complex_f_per_packet = 183;
+   int complex_f_per_packet = 366;
 
    std::complex<float> *samples = (std::complex<float> *)malloc(sizeof(std::complex<float>)*complex_f_per_packet);
    for(int i = 0; i < complex_f_per_packet; i++){
-      samples[i] = std::complex<float>(0, 0);
+      samples[i] = std::complex<float>(i, i);
    }
 
-   int num_packets_to_send = 257;
+   int num_packets_to_send = 0x1001;
    for(int i = 0; i < num_packets_to_send; i++)
       iqClient->SendPayload(samples, complex_f_per_packet);
 
-   EXPECT_EQ(iqClient->hrzr_udp_transmitter->getCurrentSequenceNumber(), num_packets_to_send);
+   EXPECT_EQ(iqClient->hrzr_udp_transmitter->getCurrentSequenceNumber(), 1);
 
    free(samples);
 }
