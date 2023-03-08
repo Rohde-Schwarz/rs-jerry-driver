@@ -82,13 +82,13 @@ public:
       return sample_source;
    }
 
-   void SetupDpdkSource();
+   void SetupDpdkSource(DpdkSource::stream_attr *streams, int num_streams);
    void TeardownDpdkSource();
 
    void SetupUdpSource();
    void TeardownUdpSource();
 
-   int GetSamples(int number_of_samples, std::complex<float> *samples);
+   int GetSamples(int num_stream, int number_of_samples, std::complex<float> *samples);
 
 private:
    const std::string VERSION = "1.0";

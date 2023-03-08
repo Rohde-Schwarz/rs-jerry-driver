@@ -18,7 +18,7 @@ class UdpSource : public ILinuxSource {
 public:
    UdpSource(float norm);
    ~UdpSource() override;
-   int getSamples(int number_of_samples, std::complex<float> *samples) override;
+   int getSamples(int num_stream, int number_of_samples, std::complex<float> *samples) override;
    void setIp(std::string ip);
    void setPort(int port);
    void connect();
