@@ -90,7 +90,7 @@ TEST_F(IqClientTest, CanSetStreamingSettings)
    EXPECT_EQ(iqClient->GetProtocol(), RsIcpxGrpcService::Protocols::HRZR);
 }
 
-TEST_F(IqClientTest, DISABLED_CanSetChannelSettings)
+TEST_F(IqClientTest, CanSetChannelSettings)
 {
    ConnectToMSR4();
 
@@ -104,7 +104,7 @@ TEST_F(IqClientTest, DISABLED_CanSetChannelSettings)
    EXPECT_EQ(iqClient->GetAnalysisBandwidth(), 195000000);
 }
 
-TEST_F(IqClientTest, DISABLED_CanSetMSR4ByJson)
+TEST_F(IqClientTest, CanSetMSR4ByJson)
 {
    iqClient->SetMSR4ByJson("full/path/to/rs-jerry-driver/configFiles/example.json");
 
@@ -116,7 +116,7 @@ TEST_F(IqClientTest, DISABLED_CanSetMSR4ByJson)
    EXPECT_EQ(iqClient->GetAnalysisBandwidth(), 194100000);
 }
 
-TEST_F(IqClientTest, DISABLED_CanSetDPDKSettings)
+TEST_F(IqClientTest, CanSetDPDKSettings)
 {
    iqClient->SetPortID(0);
    iqClient->SetNorm(10);
@@ -158,7 +158,7 @@ TEST_F(IqClientTest, DISABLED_GetSamples)
    ReceivePackets(&payload, &payload_size);
 }
 
-TEST_F(IqClientTest, DISABLED_WriteSamplesToFile)
+TEST_F(IqClientTest, WriteSamplesToFile)
 {
    int number_of_packets = 100;
 
