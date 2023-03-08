@@ -261,3 +261,12 @@ int IqClient::GetSamples(int number_of_samples, std::complex<float> *samples)
 {
    return sample_source->getSamples(number_of_samples, samples);
 }
+
+void IqClient::SendPayload(std::complex<float> *samples, int number_of_samples){
+   std::vector<int16_t> smpl(number_of_samples*2);
+   for(int i = 0; i < number_of_samples; i++){
+      smpl[2*i] = samples[i].real();
+      smpl[2*i+1] = samples[i].imag();
+   }
+   hrzr_udp_transmitter->sendPacket(smpl);
+}

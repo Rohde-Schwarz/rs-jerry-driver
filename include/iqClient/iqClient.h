@@ -8,10 +8,12 @@
 #include "dpdkSource/dpdkSource.h"
 #include "grpcClient.h"
 #include "udpSource/udpSource.h"
+#include "udpTransmitter/hrzrUdpTransmitter.h"
 
 class IqClient {
 public:
    IqClient();
+   HrzrUdpTransmitter *hrzr_udp_transmitter;
 
 #pragma region MSR4
    grpc::Status MSR4Login();
@@ -89,6 +91,7 @@ public:
    void TeardownUdpSource();
 
    int GetSamples(int number_of_samples, std::complex<float> *samples);
+   void SendPayload(std::complex<float> *samples, int number_of_samples);
 
 private:
    const std::string VERSION = "1.0";
