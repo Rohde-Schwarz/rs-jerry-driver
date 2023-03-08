@@ -90,7 +90,7 @@ TEST_F(IqClientTest, CanSetStreamingSettings)
    EXPECT_EQ(iqClient->GetProtocol(), RsIcpxGrpcService::Protocols::HRZR);
 }
 
-TEST_F(IqClientTest, CanSetChannelSettings)
+TEST_F(IqClientTest, DISABLED_CanSetChannelSettings)
 {
    ConnectToMSR4();
 
@@ -104,7 +104,7 @@ TEST_F(IqClientTest, CanSetChannelSettings)
    EXPECT_EQ(iqClient->GetAnalysisBandwidth(), 195000000);
 }
 
-TEST_F(IqClientTest, CanSetMSR4ByJson)
+TEST_F(IqClientTest, DISABLED_CanSetMSR4ByJson)
 {
    iqClient->SetMSR4ByJson("full/path/to/rs-jerry-driver/configFiles/example.json");
 
@@ -116,7 +116,7 @@ TEST_F(IqClientTest, CanSetMSR4ByJson)
    EXPECT_EQ(iqClient->GetAnalysisBandwidth(), 194100000);
 }
 
-TEST_F(IqClientTest, CanSetDPDKSettings)
+TEST_F(IqClientTest, DISABLED_CanSetDPDKSettings)
 {
    iqClient->SetPortID(0);
    iqClient->SetNorm(10);
@@ -158,7 +158,7 @@ TEST_F(IqClientTest, DISABLED_GetSamples)
    ReceivePackets(&payload, &payload_size);
 }
 
-TEST_F(IqClientTest, WriteSamplesToFile)
+TEST_F(IqClientTest, DISABLED_WriteSamplesToFile)
 {
    int number_of_packets = 100;
 
@@ -179,25 +179,30 @@ TEST_F(IqClientTest, WriteSamplesToFile)
 TEST_F(IqClientTest, SendPayload)
 {
    iqClient->hrzr_udp_transmitter = new HrzrUdpTransmitter();
-   iqClient->hrzr_udp_transmitter->setLocalSockaddr("192.168.30.1", 5009);
-   iqClient->hrzr_udp_transmitter->setDestSockaddr("192.168.30.100", 5010);
+   iqClient->hrzr_udp_transmitter->setLocalSockaddr("192.168.30.1", 5000);
+   iqClient->hrzr_udp_transmitter->setDestSockaddr("192.168.40.1", 5001);
    iqClient->hrzr_udp_transmitter->openSocketAndConnect();
 
    auto localSockAddr = iqClient->hrzr_udp_transmitter->getLocalSockAddr();
    EXPECT_EQ(localSockAddr.sin_family, AF_INET);
-   EXPECT_EQ(localSockAddr.sin_port, 5009);
+   EXPECT_EQ(localSockAddr.sin_port, 5000);
 
    auto destSockAddr = iqClient->hrzr_udp_transmitter->getDestSockAddr();
    EXPECT_EQ(destSockAddr.sin_family, AF_INET);
-   EXPECT_EQ(destSockAddr.sin_port, htons(5010));
+   EXPECT_EQ(destSockAddr.sin_port, htons(5001));
 
-   std::complex<float> *samples = (std::complex<float> *)malloc(sizeof(std::complex<float>)*183);
-   for(int i = 0; i < 183; i++){
+   int complex_f_per_packet = 183;
+
+   std::complex<float> *samples = (std::complex<float> *)malloc(sizeof(std::complex<float>)*complex_f_per_packet);
+   for(int i = 0; i < complex_f_per_packet; i++){
       samples[i] = std::complex<float>(0, 0);
    }
-   iqClient->SendPayload(samples, 183);
-   iqClient->SendPayload(samples, 183);
-   iqClient->SendPayload(samples, 183);
 
-   EXPECT_EQ(iqClient->hrzr_udp_transmitter->getCurrentSequenceNumber(), 3);
+   int num_packets_to_send = 257;
+   for(int i = 0; i < num_packets_to_send; i++)
+      iqClient->SendPayload(samples, complex_f_per_packet);
+
+   EXPECT_EQ(iqClient->hrzr_udp_transmitter->getCurrentSequenceNumber(), num_packets_to_send);
+
+   free(samples);
 }

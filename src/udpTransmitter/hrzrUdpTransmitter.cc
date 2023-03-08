@@ -1,6 +1,8 @@
 #include "../../include/iqClient/udpTransmitter/hrzrUdpTransmitter.h"
-#include "../../include/iqClient/common/definitions.h"
+
 #include <arpa/inet.h>
+#include <iostream>
+#include <cstring>
 
 HrzrUdpTransmitter::HrzrUdpTransmitter():
 current_sequence_number(0)
@@ -25,12 +27,12 @@ void HrzrUdpTransmitter::openSocketAndConnect()
     connect(my_sock, (struct sockaddr*) &dest, sizeof( dest ) );
 }
 
-void HrzrUdpTransmitter::sendPacket(int16_t *samples, int num_samples)
+void HrzrUdpTransmitter::sendPacket(std::vector<int16_t> samples)
 {
-    HrzrHeader header = makeHrzrHeader(num_samples);
-    HrzrPayload payload = makeHrzrPayload(samples, num_samples);
+    HrzrHeader header = makeHrzrHeader(samples.size());
+    HrzrPayload payload = makeHrzrPayload(samples);
     HrzrPacket packet = makeHrzrPacket(header, payload);
-    sendto(my_sock, (const void*)&packet, packet.total_pck_len, 0, (sockaddr *)&dest, sizeof(dest));
+    send(my_sock, (const void*)&packet, packet.total_pck_len, 0);
     current_sequence_number++;
     if(current_sequence_number == 4096)
         current_sequence_number = 0;
@@ -41,17 +43,13 @@ HrzrUdpTransmitter::HrzrHeader HrzrUdpTransmitter::makeHrzrHeader(int num_sample
     header.control = 0;
     header.sequence_number = current_sequence_number;
     header.source_id = 0;
-    header.total_packt_length = 8 + num_samples * definitions::SAMPLE_SIZE_IN_BYTE; // 8 byte hrzr; see definitions.h
+    header.total_packt_length = 8 + num_samples * definitions::SAMPLE_SIZE_IN_BYTE * 2; // 8 byte hrzr; see definitions.h
     return header;
 }
 
-HrzrUdpTransmitter::HrzrPayload HrzrUdpTransmitter::makeHrzrPayload(int16_t *samples, int num_samples){
+HrzrUdpTransmitter::HrzrPayload HrzrUdpTransmitter::makeHrzrPayload(std::vector<int16_t> samples){
     HrzrPayload payload;
-    payload.num_samples = num_samples;
-    payload.samples = (int16_t*)malloc(sizeof(int16_t)*num_samples);
-    for(int i = 0; i < num_samples; i++){
-        payload.samples[i] = samples[i];
-    }
+    payload.samples = samples;
     return payload;
 }
 
@@ -60,7 +58,7 @@ HrzrUdpTransmitter::HrzrPacket HrzrUdpTransmitter::makeHrzrPacket(HrzrHeader hea
     packet.ctrl_and_seq_nb = (static_cast<uint16_t>(header.control) << 12) | header.sequence_number;
     packet.total_pck_len = header.total_packt_length;
     packet.src_id = header.source_id;
-    packet.samples = payload.samples;
-
+    packet.samples[payload.samples.size()];
+    std::memcpy(packet.samples, payload.samples.data(), sizeof(int16_t)*payload.samples.size());
     return packet;
 }

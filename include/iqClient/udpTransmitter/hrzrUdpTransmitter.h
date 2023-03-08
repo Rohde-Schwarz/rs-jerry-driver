@@ -3,6 +3,8 @@
 #include <sys/socket.h>
 #include <netinet/ip.h>
 #include <string>
+#include <vector>
+#include "../common/definitions.h"
 
 class HrzrUdpTransmitter {
 public:
@@ -12,7 +14,7 @@ public:
   void setDestSockaddr(std::string ip, uint16_t port);
   void openSocketAndConnect();
 
-  void sendPacket(int16_t *samples, int num_samples);
+  void sendPacket(std::vector<int16_t> samples);
 
   sockaddr_in getLocalSockAddr(){return local;}
   sockaddr_in getDestSockAddr(){return dest;}
@@ -27,16 +29,15 @@ private:
   };
 
   struct HrzrPayload{
-    int num_samples;
-    int16_t *samples;
+    std::vector<int16_t> samples;
   };
 
   struct HrzrPacket{
     uint16_t ctrl_and_seq_nb;
     uint16_t total_pck_len;
     uint32_t src_id;
-    int16_t *samples;
-  };
+    int16_t samples[definitions::SAMPLES_PER_PACKET];
+  }__attribute__( ( packed ) );
 
   struct sockaddr_in local;
   struct sockaddr_in dest;
@@ -44,6 +45,6 @@ private:
   uint16_t current_sequence_number;
   
   HrzrHeader makeHrzrHeader(int num_samples);
-  HrzrPayload makeHrzrPayload(int16_t *samples, int num_samples);
+  HrzrPayload makeHrzrPayload(std::vector<int16_t> samples);
   HrzrPacket makeHrzrPacket(HrzrHeader header, HrzrPayload payload);
 };
