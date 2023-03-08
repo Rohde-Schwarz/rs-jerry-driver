@@ -30,39 +30,58 @@ SOFTWARE.
 #include <iomanip>
 #include <iostream>
 
-DpdkSource::DpdkSource(int dpdk_port_id, uint16_t udp_rx_port, float norm, bool dump_mode)
+DpdkSource::DpdkSource(stream_attr *streams, int num_streams, float norm, bool dump_mode)
    : hrzr_parser(std::make_unique<HrzrParser>(norm))
-   , dpdk_port_id(dpdk_port_id)
+   , num_streams(num_streams)
+   , streams(streams)
    , quit(false)
-   , udp_rx_port(udp_rx_port)
    , total_packets(0)
    , total_packets_lost(0)
 {
    setupDpdk();
-   setupPort();
-   ring = rte_ring_create("rx_ring", definitions::RING_SIZE, rte_socket_id(), RING_F_SP_ENQ | RING_F_SC_DEQ);
-   if(dump_mode)
-      rte_eal_remote_launch((lcore_function_t *) dumpThread, this, 7);
-   else
-      rte_eal_remote_launch((lcore_function_t *) RXThread, this, 7);
-   printf("DPDK setup and ready to receive samples\n");
+
+   for (int i = 0; i < num_streams; i++)
+   {
+      setupPort(i);
+
+      std::string ring_name("rx_ring_" + std::to_string(i));
+      streams[i].ring = rte_ring_create(ring_name.c_str(), definitions::RING_SIZE, rte_socket_id(), RING_F_SP_ENQ | RING_F_SC_DEQ);
+   }
+
+   // Note: for some reason we need to setup all ports, mempools and rings before launching the first RXThread
+   for(int i = 0; i < num_streams; i++){
+      if (dump_mode)
+         rte_eal_remote_launch((lcore_function_t *) dumpThread, this, 7);
+      else
+      {
+         rx_thread_arg *rx_arg = (rx_thread_arg*)malloc(sizeof(rx_thread_arg));
+         rx_arg->dpdk_source = this;
+         rx_arg->num_stream = i;
+         rte_eal_remote_launch((lcore_function_t *) RXThread, (void*)rx_arg, streams[i].l_cores.second);
+      }
+   }
 }
 
 void DpdkSource::setupDpdk()
 {
-   // For most argv params, please see: https://doc.dpdk.org/guides/linux_gsg/linux_eal_parameters.html 
-   std::vector<const char *> argv{"dpdk", "-l", "5,7", "--log-level", "lib.eal:error"};
+   // For most argv params, please see: https://doc.dpdk.org/guides/linux_gsg/linux_eal_parameters.html
+   std::string l_cores_string("");
+   for(int i = 0; i < num_streams; i++){
+      l_cores_string += std::to_string(streams[i].l_cores.first) + "," + std::to_string(streams[i].l_cores.second);
+      if(i+1 < num_streams)
+         l_cores_string += ",";
+   }
+
+   std::vector<const char *> argv{"dpdk", "-l", l_cores_string.c_str(), "--log-level", "lib.eal:error"};
    setupEal(std::move(argv));
    checkAvailablePorts();
    allocateMemPool();
 }
 
 void DpdkSource::setupEal(std::vector<const char *> argv){
-   printf("EAL: Init start\n");
    int ret = rte_eal_init(argv.size(), (char **) argv.data());
    if (ret < 0)
       rte_exit(EXIT_FAILURE, "Invalid EAL arguments\n");
-   printf("EAL: Init end\n");
 }
 
 void DpdkSource::checkAvailablePorts(){
@@ -70,48 +89,53 @@ void DpdkSource::checkAvailablePorts(){
    if (nr_ports == 0)
       rte_exit(EXIT_FAILURE, "No Ethernet ports found\n");
 
-   if (nr_ports != 1)
+   if (nr_ports != num_streams)
    {
-      printf("Warn: %d VF ports detected, but we use only one: port %u\n", nr_ports, dpdk_port_id);
+      printf("Warn: %d VF ports detected, but we use %u\n", nr_ports, num_streams);
    }
 }
 
 void DpdkSource::allocateMemPool(){
-   mbuf_pool = rte_pktmbuf_pool_create("mbuf_pool", 4096, 0, 0, RTE_MBUF_DEFAULT_BUF_SIZE, rte_socket_id());
-   if (mbuf_pool == NULL)
-      rte_exit(EXIT_FAILURE, "Cannot init mbuf pool\n");
+   for (int i = 0; i < num_streams; i++)
+   {
+      std::string mbuf_pool_name("mbuf_pool_" + std::to_string(i));
+      streams[i].mbuf_pool = rte_pktmbuf_pool_create(mbuf_pool_name.c_str(), 4096, 0, 0, RTE_MBUF_DEFAULT_BUF_SIZE, rte_socket_id());
+      if (streams[i].mbuf_pool == NULL)
+         rte_exit(EXIT_FAILURE, "Cannot init mbuf pool\n");
+   }
 }
 
-void DpdkSource::setupPort()
+void DpdkSource::setupPort(int num_stream)
 {
    struct rte_eth_rxconf rxq_conf;
-   configureRxConf(rxq_conf);
+   configureRxConf(num_stream, rxq_conf);
 
-   setupRxQueues(rxq_conf);
-   enablePromiscuousMode();
+   setupRxQueues(num_stream, rxq_conf);
+   enablePromiscuousMode(num_stream);
 
-   startPort();
-   assertLinkStatus();
+   startPort(num_stream);
+   assertLinkStatus(num_stream);
 }
 
-void DpdkSource::configureRxConf(rte_eth_rxconf &rxq_conf){
-   rte_eth_dev_info dev_info = getDevInfo();
+void DpdkSource::configureRxConf(int num_stream, rte_eth_rxconf &rxq_conf){
+   rte_eth_dev_info dev_info = getDevInfo(num_stream);
    rxq_conf = dev_info.default_rxconf;
-
-   rte_eth_conf port_conf = getPortConf(dev_info);
+   
+   rte_eth_conf port_conf = getPortConf(num_stream, dev_info);
    rxq_conf.offloads = port_conf.rxmode.offloads;
 }
 
-rte_eth_dev_info DpdkSource::getDevInfo(){
+rte_eth_dev_info DpdkSource::getDevInfo(int num_stream){
    rte_eth_dev_info dev_info;
-   int ret = rte_eth_dev_info_get(dpdk_port_id, &dev_info);
+   int ret = rte_eth_dev_info_get(streams[num_stream].dpdk_port_id, &dev_info);
+
    if (ret != 0)
-      rte_exit(EXIT_FAILURE, "Error getting dev info of device (port %u) info: %s\n", dpdk_port_id, strerror(-ret));
+      rte_exit(EXIT_FAILURE, "Error getting dev info of device (port %u) info: %s\n", streams[num_stream].dpdk_port_id, strerror(-ret));
    
    return dev_info;
 }
 
-rte_eth_conf DpdkSource::getPortConf(rte_eth_dev_info &dev_info){
+rte_eth_conf DpdkSource::getPortConf(int num_stream, rte_eth_dev_info &dev_info){
    rte_eth_conf port_conf = {
        .rxmode =
            {
@@ -120,45 +144,45 @@ rte_eth_conf DpdkSource::getPortConf(rte_eth_dev_info &dev_info){
    };
 
    port_conf.txmode.offloads &= dev_info.tx_offload_capa;
-   configurePort(port_conf);
+   configurePort(num_stream, port_conf);
    return port_conf;
 }
 
-void DpdkSource::configurePort(rte_eth_conf &port_conf){
-   int ret = rte_eth_dev_configure(dpdk_port_id, definitions::NR_QUEUES, 0, &port_conf);//configure for tx only
+void DpdkSource::configurePort(int num_stream, rte_eth_conf &port_conf){
+   int ret = rte_eth_dev_configure(streams[num_stream].dpdk_port_id, definitions::NR_QUEUES, 0, &port_conf);//configure for tx only
    if (ret < 0)
-      rte_exit(EXIT_FAILURE, ":: cannot configure device: err=%d, port=%u\n", ret, dpdk_port_id);
+      rte_exit(EXIT_FAILURE, ":: cannot configure device: err=%d, port=%u\n", ret, streams[num_stream].dpdk_port_id);
 }
 
-void DpdkSource::setupRxQueues(rte_eth_rxconf &rxq_conf){
+void DpdkSource::setupRxQueues(int num_stream, rte_eth_rxconf &rxq_conf){
    for (int i = 0; i < definitions::NR_QUEUES; i++)
    {
-      int ret = rte_eth_rx_queue_setup(dpdk_port_id, i, 4096, rte_eth_dev_socket_id(dpdk_port_id), &rxq_conf, mbuf_pool);
+      int ret = rte_eth_rx_queue_setup(streams[num_stream].dpdk_port_id, i, 4096, rte_eth_dev_socket_id(streams[num_stream].dpdk_port_id), &rxq_conf, streams[num_stream].mbuf_pool);
       if (ret < 0)
       {
-         rte_exit(EXIT_FAILURE, "Rx queue setup failed: err=%d, port=%u\n", ret, dpdk_port_id);
+         rte_exit(EXIT_FAILURE, "Rx queue setup failed: err=%d, port=%u\n", ret, streams[num_stream].dpdk_port_id);
       }
    }
 }
 
-void DpdkSource::enablePromiscuousMode(){
-   int ret = rte_eth_promiscuous_enable(dpdk_port_id);
+void DpdkSource::enablePromiscuousMode(int num_stream){
+   int ret = rte_eth_promiscuous_enable(streams[num_stream].dpdk_port_id);
    if (ret != 0)
-      rte_exit(EXIT_FAILURE, "Promiscuous mode enable failed: err=%s, port=%u\n", rte_strerror(-ret), dpdk_port_id);
+      rte_exit(EXIT_FAILURE, "Promiscuous mode enable failed: err=%s, port=%u\n", rte_strerror(-ret), streams[num_stream].dpdk_port_id);
 }
 
-void DpdkSource::startPort(){
-   int ret = rte_eth_dev_start(dpdk_port_id);
+void DpdkSource::startPort(int num_stream){
+   int ret = rte_eth_dev_start(streams[num_stream].dpdk_port_id);
    if (ret < 0)
-      rte_exit(EXIT_FAILURE, "rte_eth_dev_start:err=%d, port=%u\n", ret, dpdk_port_id);
+      rte_exit(EXIT_FAILURE, "rte_eth_dev_start:err=%d, port=%u\n", ret, streams[num_stream].dpdk_port_id);
 }
 
-void DpdkSource::assertLinkStatus(void)
+void DpdkSource::assertLinkStatus(int num_stream)
 {
    struct rte_eth_link link = {0};
    int link_get_err         = -EINVAL;
 
-   link_get_err = rte_eth_link_get(dpdk_port_id, &link);
+   link_get_err = rte_eth_link_get(streams[num_stream].dpdk_port_id, &link);
    if (link_get_err != 0 || link.link_status != ETH_LINK_UP)
       rte_exit(EXIT_FAILURE, "Link is not up");
 }
@@ -169,12 +193,12 @@ DpdkSource::~DpdkSource()
    rte_eal_cleanup();
 }
 
-int DpdkSource::getSamples(int number_of_samples, std::complex<float> *samples)
+int DpdkSource::getSamples(int num_stream, int number_of_samples, std::complex<float> *samples)
 {
    auto packets_to_dequeue = ((number_of_samples) / definitions::SAMPLES_PER_PACKET) + 1;
    struct rte_mbuf *mbufs[packets_to_dequeue];
    auto total_samples_received = 0;
-   auto packets_dequeued       = rte_ring_sc_dequeue_burst(ring, (void **) mbufs, packets_to_dequeue, NULL);
+   auto packets_dequeued       = rte_ring_sc_dequeue_burst(getRteRing(num_stream), (void **) mbufs, packets_to_dequeue, NULL);
 
    for (int packet_idx = 0; packet_idx < packets_dequeued; packet_idx++)
    {
@@ -188,7 +212,7 @@ int DpdkSource::getSamples(int number_of_samples, std::complex<float> *samples)
    return total_samples_received;
 }
 
-int DpdkSource::dumpThread(DpdkSource *dpdkSource)
+int DpdkSource::dumpThread(DpdkSource *dpdkSource, int num_stream)
 {
    fflush(stdout);
    struct rte_mbuf *mbufs[32];
@@ -211,7 +235,7 @@ int DpdkSource::dumpThread(DpdkSource *dpdkSource)
 
    while (!dpdkSource->shouldQuit())
    {
-      nb_rx = rte_eth_rx_burst(dpdkSource->getPortID(), definitions::SELECTED_QUEUE, mbufs, 32);
+      nb_rx = rte_eth_rx_burst(dpdkSource->getPortID(num_stream), definitions::SELECTED_QUEUE, mbufs, 32);
       
       if (nb_rx)
       {
@@ -286,18 +310,20 @@ int DpdkSource::dumpThread(DpdkSource *dpdkSource)
       }
    }
 
-   rte_flow_flush(dpdkSource->getPortID(), &error);
-   ret = rte_eth_dev_stop(dpdkSource->getPortID());
+   rte_flow_flush(dpdkSource->getPortID(num_stream), &error);
+   ret = rte_eth_dev_stop(dpdkSource->getPortID(num_stream));
    if (ret < 0)
-      printf("Failed to stop port %u: %s", dpdkSource->getPortID(), rte_strerror(-ret));
-   rte_eth_dev_close(dpdkSource->getPortID());
+      printf("Failed to stop port %u: %s", dpdkSource->getPortID(num_stream), rte_strerror(-ret));
+   rte_eth_dev_close(dpdkSource->getPortID(num_stream));
 
    return 0;
 }
 
-int DpdkSource::RXThread(DpdkSource *dpdkSource)
+int DpdkSource::RXThread(rx_thread_arg *rx_thread_arg)
 {
-   fflush(stdout);
+   DpdkSource *dpdkSource = rx_thread_arg->dpdk_source;
+   int num_stream = rx_thread_arg->num_stream;
+
    struct rte_mbuf *mbufs[32];
    struct hrzr_packet_all_headers *packet;
    struct rte_flow_error error;
@@ -310,7 +336,7 @@ int DpdkSource::RXThread(DpdkSource *dpdkSource)
 
    while (!dpdkSource->shouldQuit())
    {
-      nb_rx = rte_eth_rx_burst(dpdkSource->getPortID(), definitions::SELECTED_QUEUE, mbufs, 32);
+      nb_rx = rte_eth_rx_burst(dpdkSource->getPortID(num_stream), definitions::SELECTED_QUEUE, mbufs, 32);
       if (nb_rx)
       {
          for (j = 0; j < nb_rx; j++)
@@ -330,15 +356,15 @@ int DpdkSource::RXThread(DpdkSource *dpdkSource)
                }
                float delta = (float)dpdkSource->total_packets_lost / dpdkSource->total_packets;
                
-               std::cout << "skipping " << diff << " packets.\t" << " rate: " << delta << std::endl;
+               std::cout << "stream " << num_stream << " skipping " << diff << " packets.\t" << " rate: " << delta << std::endl;
             }
 
             //rte_pktmbuf_dump(stdout, m, sizeof(struct hrzr_packet_all_headers));
             if (packet->ipv4_hdr.next_proto_id == IPPROTO_UDP && packet->ether_hdr.ether_type == htons(RTE_ETHER_TYPE_IPV4)
-                && packet->udp.dst_port == htons(dpdkSource->getUdpRxPort()) && m->pkt_len == definitions::PAYLOAD_SIZE + sizeof(struct hrzr_packet_all_headers)
+                && packet->udp.dst_port == htons(dpdkSource->getUdpRxPort(num_stream)) && m->pkt_len == definitions::PAYLOAD_SIZE + sizeof(struct hrzr_packet_all_headers)
                 && dpdkSource->isValidPacketType(HrzrHeaderParser::getControlFromHeader(packet->hrzr)))
             {
-               rte_ring_enqueue(dpdkSource->getRteRing(), (void *) m);
+               rte_ring_enqueue(dpdkSource->getRteRing(num_stream), (void *) m);
             }
             else
             {
@@ -348,11 +374,11 @@ int DpdkSource::RXThread(DpdkSource *dpdkSource)
       }
    }
 
-   rte_flow_flush(dpdkSource->getPortID(), &error);
-   ret = rte_eth_dev_stop(dpdkSource->getPortID());
+   rte_flow_flush(dpdkSource->getPortID(num_stream), &error);
+   ret = rte_eth_dev_stop(dpdkSource->getPortID(num_stream));
    if (ret < 0)
-      printf("Failed to stop port %u: %s", dpdkSource->getPortID(), rte_strerror(-ret));
-   rte_eth_dev_close(dpdkSource->getPortID());
+      printf("Failed to stop port %u: %s", dpdkSource->getPortID(num_stream), rte_strerror(-ret));
+   rte_eth_dev_close(dpdkSource->getPortID(num_stream));
 
    return 0;
 }

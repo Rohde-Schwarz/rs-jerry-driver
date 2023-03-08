@@ -84,13 +84,13 @@ public:
       return sample_source;
    }
 
-   void SetupDpdkSource();
+   void SetupDpdkSource(DpdkSource::stream_attr *streams, int num_streams);
    void TeardownDpdkSource();
 
    void SetupUdpSource();
    void TeardownUdpSource();
 
-   int GetSamples(int number_of_samples, std::complex<float> *samples);
+   int GetSamples(int num_stream, int number_of_samples, std::complex<float> *samples);
    void SendPayload(std::complex<float> *samples, int number_of_samples);
 
 private:

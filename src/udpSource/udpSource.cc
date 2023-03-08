@@ -67,7 +67,7 @@ void UdpSource::disconnect()
 }
 
 // TODO caching of unused symbols missing
-int UdpSource::getSamples(int number_of_samples, std::complex<float> *samples)
+int UdpSource::getSamples(int num_stream, int number_of_samples, std::complex<float> *samples)
 {
    auto packets_to_dequeue     = ((number_of_samples) / definitions::SAMPLES_PER_PACKET) + 1;
    auto total_samples_received = 0;

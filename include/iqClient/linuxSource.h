@@ -5,5 +5,5 @@
 class ILinuxSource {
 public:
    virtual ~ILinuxSource()                                                   = default;
-   virtual int getSamples(int numberOfSamples, std::complex<float> *samples) = 0;
+   virtual int getSamples(int num_stream, int numberOfSamples, std::complex<float> *samples) = 0;
 };

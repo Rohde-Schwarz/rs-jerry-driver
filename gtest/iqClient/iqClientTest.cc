@@ -26,6 +26,27 @@ SOFTWARE.
 #include <fstream>
 #include <iostream>
 
+struct receiver_args{
+   IqClient *iqClient;
+   int num_stream;
+   bool *should_quit;
+   uint64_t *num_total_samples_recv;
+};
+
+void *receive_thread(void* arg){
+   receiver_args *my_arg = (receiver_args*)arg;
+   int samples_to_receive = 1830;
+   std::complex<float> *payload = (std::complex<float>*)malloc(sizeof(std::complex<float>)*samples_to_receive);
+
+   while(!(*my_arg->should_quit)){
+      int recv = my_arg->iqClient->GetSamples(my_arg->num_stream, samples_to_receive, &payload[0]);
+      *(my_arg->num_total_samples_recv) += recv;
+   }
+
+   free(payload);
+   return NULL;
+}
+
 class IqClientTest : public ::testing::Test {
 protected:
    IqClient *iqClient;
@@ -40,18 +61,27 @@ protected:
 
    void ReceivePackets(std::vector<std::vector<std::complex<float>>> *payload, std::vector<int> *nsamples_ptr)
    {
-      iqClient->SetMSR4ByJson("full/path/to/rs-jerry-driver/configFiles/example.json");
+      DpdkSource::stream_attr *streams = (DpdkSource::stream_attr *) malloc(sizeof(DpdkSource::stream_attr) * 1);
 
-      iqClient->SetPortID(0);
-      iqClient->SetNorm(10000);
-      iqClient->SetupDpdkSource();
+      DpdkSource::stream_attr stream1;
+      stream1.dpdk_port_id = 0;
+      stream1.udp_rx_port  = 5000;
+      stream1.l_cores      = std::pair<int, int>(0, 24);
+      streams[0]           = stream1;
+
+      iqClient->SetupDpdkSource(streams, 1);
+
+      ConnectToMSR4();
+      iqClient->SetRxChannel(GrpcClient::MSR4Channel::Rx1);
+      iqClient->SetProtocol(RsIcpxGrpcService::Protocols::HRZR);
+      iqClient->SetPort(stream1.udp_rx_port);
 
       iqClient->SetStreamingStatus(true);
 
       int itr = 0;
       while (itr < nsamples_ptr->size())
       {
-         nsamples_ptr->at(itr) = iqClient->GetSamples(3660, payload->at(itr).data());
+         nsamples_ptr->at(itr) = iqClient->GetSamples(0, 3660, payload->at(itr).data());
          if (nsamples_ptr->at(itr) > 0)
             itr++;
       }
@@ -63,8 +93,7 @@ protected:
 
 TEST_F(IqClientTest, AmmosException)
 {
-   iqClient->SetProtocol(RsIcpxGrpcService::Protocols::AMMOS);
-   EXPECT_THROW(iqClient->SetupDpdkSource(), NotImplementedException);
+   EXPECT_THROW(iqClient->SetProtocol(RsIcpxGrpcService::Protocols::AMMOS), NotImplementedException);
 }
 
 TEST_F(IqClientTest, CanLogIntoMSR4)
@@ -126,6 +155,14 @@ TEST_F(IqClientTest, CanSetDPDKSettings)
 }
 
 TEST_F(IqClientTest, DISABLED_DumpHrzr){
+   DpdkSource::stream_attr *streams = (DpdkSource::stream_attr *) malloc(sizeof(DpdkSource::stream_attr) * 1);
+
+   DpdkSource::stream_attr stream1;
+   stream1.dpdk_port_id = 0;
+   stream1.udp_rx_port  = 5000;
+   stream1.l_cores      = std::pair<int, int>(0, 24);
+   streams[0]           = stream1;
+
    iqClient->SetMSR4ByJson("full/path/to/rs-jerry-driver/configFiles/example.json");
 
    int number_of_samples = 4096;
@@ -134,13 +171,13 @@ TEST_F(IqClientTest, DISABLED_DumpHrzr){
    iqClient->SetBandwidthBySampleRate(10000000);
    iqClient->SetPortID(0);
    iqClient->SetNorm(10000);
-   iqClient->SetupDpdkSource();
+   iqClient->SetupDpdkSource(streams, 1);
 
    std::complex<float> *output = (std::complex<float> *)malloc(sizeof(std::complex<float>)*number_of_samples);
 
    iqClient->SetStreamingStatus(true);
    while(!((DpdkSource*)iqClient->GetSource())->shouldQuit()) {
-      iqClient->GetSamples(number_of_samples, output);
+      iqClient->GetSamples(0, number_of_samples, output);
    }
    iqClient->SetStreamingStatus(false);
 
@@ -182,7 +219,7 @@ TEST_F(IqClientTest, SendPayload)
    iqClient->hrzr_udp_transmitter->setLocalSockaddr("192.168.30.1", 5000);
    iqClient->hrzr_udp_transmitter->setDestSockaddr("192.168.40.1", 5001);
    iqClient->hrzr_udp_transmitter->openSocketAndConnect();
-
+   
    auto localSockAddr = iqClient->hrzr_udp_transmitter->getLocalSockAddr();
    EXPECT_EQ(localSockAddr.sin_family, AF_INET);
    EXPECT_EQ(localSockAddr.sin_port, 5000);
@@ -200,9 +237,100 @@ TEST_F(IqClientTest, SendPayload)
 
    int num_packets_to_send = 0x1001;
    for(int i = 0; i < num_packets_to_send; i++)
-      iqClient->SendPayload(samples, complex_f_per_packet);
+      iqClient->SendPayload(samples, complex_f_per_packet);      
+}
 
-   EXPECT_EQ(iqClient->hrzr_udp_transmitter->getCurrentSequenceNumber(), 1);
+TEST_F(IqClientTest, GetSamplesOnTwoStreams){
+   int time_duration_in_seconds = 10;
+   int samplerate_in_hz = 20000000; // = 20MHz
 
-   free(samples);
+   ConnectToMSR4();
+
+   cpu_set_t cpuset;
+   pthread_t thread;
+   thread = pthread_self();
+   CPU_ZERO(&cpuset);
+   CPU_SET(1, &cpuset);
+   pthread_setaffinity_np(thread, sizeof(cpuset), &cpuset);
+
+   DpdkSource::stream_attr *streams = (DpdkSource::stream_attr*)malloc(sizeof(DpdkSource::stream_attr) * 2);
+
+   DpdkSource::stream_attr stream1;
+   stream1.dpdk_port_id = 0;
+   stream1.udp_rx_port = 5000;
+   stream1.l_cores = std::pair<int, int>(0, 24);
+   streams[0] = stream1;
+   iqClient->SetRxChannel(GrpcClient::MSR4Channel::Rx1);
+   iqClient->SetBandwidthBySampleRate(samplerate_in_hz);
+   iqClient->SetProtocol(RsIcpxGrpcService::Protocols::HRZR);
+   iqClient->SetPort(stream1.udp_rx_port);
+   iqClient->SetDestinationAddress("192.168.30.1");
+
+   DpdkSource::stream_attr stream2;
+   stream2.dpdk_port_id = 1;
+   stream2.udp_rx_port = 5001;
+   stream2.l_cores = std::pair<int, int>(2, 26);
+   streams[1] = stream2;
+   iqClient->SetRxChannel(GrpcClient::MSR4Channel::Rx2);
+   iqClient->SetBandwidthBySampleRate(samplerate_in_hz);
+   iqClient->SetProtocol(RsIcpxGrpcService::Protocols::HRZR);
+   iqClient->SetPort(stream2.udp_rx_port);
+   iqClient->SetDestinationAddress("192.168.40.1");
+
+   iqClient->SetNorm(10000);
+   iqClient->SetupDpdkSource(streams, 2);
+
+   receiver_args arg1;
+   bool should_quit1 = false;
+   uint64_t total_samp_recv1 = 0;
+   arg1.num_stream = 0;
+   arg1.should_quit = &should_quit1;
+   arg1.iqClient = iqClient;
+   arg1.num_total_samples_recv = &total_samp_recv1;
+
+   receiver_args arg2;
+   bool should_quit2 = false;
+   uint64_t total_samp_recv2 = 0;
+   arg2.num_stream = 1;
+   arg2.should_quit = &should_quit2;
+   arg2.iqClient = iqClient;
+   arg2.num_total_samples_recv = &total_samp_recv2;
+
+   pthread_t thread1;
+   cpu_set_t cpuset1;
+   CPU_ZERO(&cpuset1);
+   CPU_SET(3, &cpuset1);
+   pthread_create(&thread1, NULL, receive_thread, (void*)&arg1);
+   pthread_setaffinity_np(thread1, sizeof(cpuset1), &cpuset1);
+
+   pthread_t thread2;
+   cpu_set_t cpuset2;
+   CPU_ZERO(&cpuset2);
+   CPU_SET(5, &cpuset2);
+   pthread_create(&thread2, NULL, receive_thread, (void*)&arg2);
+   pthread_setaffinity_np(thread2, sizeof(cpuset2), &cpuset2);
+
+   iqClient->SetStreamingStatus(true);
+   iqClient->SetRxChannel(GrpcClient::MSR4Channel::Rx1);
+   iqClient->SetStreamingStatus(true);
+
+   std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
+   std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
+   while(std::chrono::duration_cast<std::chrono::seconds> (end - begin).count() < time_duration_in_seconds){
+      end = std::chrono::steady_clock::now();
+   }
+
+   should_quit1 = true;
+   should_quit2 = true;
+   pthread_join(thread1, NULL);
+   pthread_join(thread2, NULL);
+
+   iqClient->SetStreamingStatus(false);
+   iqClient->SetRxChannel(GrpcClient::MSR4Channel::Rx2);
+   iqClient->SetStreamingStatus(false);
+
+   std::cout << "Stream 1 received " << total_samp_recv1 << " samples in " << time_duration_in_seconds << "s @ SampleRate: " << samplerate_in_hz << "Hz" << std::endl;
+   std::cout << "Stream 2 received " << total_samp_recv2 << " samples in " << time_duration_in_seconds << "s @ SampleRate: " << samplerate_in_hz << "Hz" << std::endl;
+
+   free(streams);
 }

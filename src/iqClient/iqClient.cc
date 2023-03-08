@@ -62,6 +62,9 @@ RsIcpxGrpcService::ErrorMessage IqClient::SetDestinationAddress(std::string dest
 
 RsIcpxGrpcService::ErrorMessage IqClient::SetProtocol(RsIcpxGrpcService::Protocols my_protocol)
 {
+   if (my_protocol == RsIcpxGrpcService::Protocols::AMMOS)
+      throw NotImplementedException("AMMOS Protocol not yet implemented.");
+
    RsIcpxGrpcService::UdpSetting my_setting = grpc_client->GetUDPSetting(msr4_channel);
    my_setting.set_protocol(my_protocol);
    return grpc_client->SetUDPSetting(msr4_channel, my_setting);
@@ -235,11 +238,9 @@ void IqClient::SetNorm(float norm)
    this->norm = norm;
 }
 
-void IqClient::SetupDpdkSource()
+void IqClient::SetupDpdkSource(DpdkSource::stream_attr *streams, int num_streams)
 {
-   if (GetProtocol() == RsIcpxGrpcService::Protocols::AMMOS)
-      throw NotImplementedException("AMMOS Protocol not yet implemented.");
-   sample_source = new DpdkSource(port_id, GetPort(), norm, dump_mode);
+   sample_source = new DpdkSource(streams, num_streams, norm, dump_mode);
 }
 
 void IqClient::TeardownDpdkSource()
@@ -257,9 +258,9 @@ void IqClient::TeardownUdpSource()
    delete sample_source;
 }
 
-int IqClient::GetSamples(int number_of_samples, std::complex<float> *samples)
+int IqClient::GetSamples(int num_stream, int number_of_samples, std::complex<float> *samples)
 {
-   return sample_source->getSamples(number_of_samples, samples);
+   return sample_source->getSamples(num_stream, number_of_samples, samples);
 }
 
 void IqClient::SendPayload(std::complex<float> *samples, int number_of_samples){

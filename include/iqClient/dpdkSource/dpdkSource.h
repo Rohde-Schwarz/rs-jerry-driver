@@ -25,15 +25,29 @@
 class DpdkSource : public ILinuxSource {
 
 public:
-   DpdkSource(int dpdk_port_id, uint16_t udp_rx_port, float norm, bool dump_mode = false);
+   struct stream_attr {
+      std::pair<int, int> l_cores;
+      int dpdk_port_id;
+      uint16_t udp_rx_port;
+      struct rte_mempool *mbuf_pool;
+      struct rte_ring *ring;
+   };
+
+   struct rx_thread_arg{
+      DpdkSource* dpdk_source;
+      int num_stream;
+   };
+
+   DpdkSource(stream_attr *streams, int num_streams, float norm, bool dump_mode = false);
    ~DpdkSource() override;
-   int getSamples(int number_of_samples, std::complex<float> *samples) override;
+
+   int getSamples(int num_stream, int number_of_samples, std::complex<float> *samples) override;
 
    bool shouldQuit() const { return quit; };
-   int getPortID() const { return dpdk_port_id; };
-   uint16_t getUdpRxPort() const { return udp_rx_port; };
-   struct rte_ring *getRteRing() { return ring; };
-   struct rte_mempool *getPool() { return mbuf_pool; };
+   int getPortID(int num_stream) const { return streams[num_stream].dpdk_port_id; };
+   uint16_t getUdpRxPort(int num_stream) const { return streams[num_stream].udp_rx_port; };
+   struct rte_ring *getRteRing(int num_stream) { return streams[num_stream].ring; };
+   struct rte_mempool *getPool(int num_stream) { return streams[num_stream].mbuf_pool; };
 
 private:
    void setupDpdk();
@@ -41,25 +55,26 @@ private:
    void checkAvailablePorts();
    void allocateMemPool();
 
-   void setupPort();
-   void configureRxConf(rte_eth_rxconf &rxq_conf);
-   rte_eth_dev_info getDevInfo();
-   rte_eth_conf getPortConf(rte_eth_dev_info &dev_info);
-   void configurePort(rte_eth_conf &port_conf);
-   void setupRxQueues(rte_eth_rxconf &rxq_conf);
-   void enablePromiscuousMode();
-   void startPort();
-   void assertLinkStatus();
+   void setupPort(int num_stream);
+   void configureRxConf(int num_stream, rte_eth_rxconf &rxq_conf);
+   rte_eth_dev_info getDevInfo(int num_stream);
+   rte_eth_conf getPortConf(int num_stream, rte_eth_dev_info &dev_info);
+   void configurePort(int num_stream, rte_eth_conf &port_conf);
+   void setupRxQueues(int num_stream, rte_eth_rxconf &rxq_conf);
+   void enablePromiscuousMode(int num_stream);
+   void startPort(int num_stream);
+   void assertLinkStatus(int num_stream);
 
-   static int RXThread(DpdkSource *dpdkSource);
+   static int RXThread(rx_thread_arg *rx_thread_arg);
    void stopRXThread();
-   static int dumpThread(DpdkSource *dpdkSource);
+   static int dumpThread(DpdkSource *dpdkSource, int num_stream);
    bool isValidPacketType(HrzrHeaderParser::PacketType type);
 
    std::unique_ptr<HrzrParser> hrzr_parser;
 
-   int dpdk_port_id;
-   uint16_t udp_rx_port;
+   stream_attr *streams;
+   int num_streams;
+
    bool quit;
    uint64_t total_packets;
    uint64_t total_packets_lost;
@@ -78,9 +93,6 @@ private:
       struct udp_hdr udp;
       uint64_t hrzr;
    } __attribute__((__packed__));
-
-   struct rte_mempool *mbuf_pool;
-   struct rte_ring *ring;
 };
 
 #endif /* INCLUDED_DPDK_SOURCE_H */
