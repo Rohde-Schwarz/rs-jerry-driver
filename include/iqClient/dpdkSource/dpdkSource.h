@@ -40,7 +40,7 @@ public:
 
    DpdkSource(stream_attr *streams, int num_streams, float norm, bool dump_mode = false);
    ~DpdkSource() override;
-   
+
    int getSamples(int num_stream, int number_of_samples, std::complex<float> *samples) override;
 
    bool shouldQuit() const { return quit; };

@@ -30,7 +30,7 @@ struct receiver_args{
    IqClient *iqClient;
    int num_stream;
    bool *should_quit;
-   uint64_t *num_total_samples_recv; 
+   uint64_t *num_total_samples_recv;
 };
 
 void *receive_thread(void* arg){
@@ -42,7 +42,7 @@ void *receive_thread(void* arg){
       int recv = my_arg->iqClient->GetSamples(my_arg->num_stream, samples_to_receive, &payload[0]);
       *(my_arg->num_total_samples_recv) += recv;
    }
-   
+
    free(payload);
    return NULL;
 }
@@ -54,8 +54,8 @@ protected:
 
    grpc::Status ConnectToMSR4()
    {
-      iqClient->SetMSR4Ip("msr4-101060.rsint.net");
-      iqClient->SetMSR4Credentials("msr4", "123456");
+      iqClient->SetMSR4Ip("some.device.net");
+      iqClient->SetMSR4Credentials("user", "password");
       return iqClient->MSR4Login();
    }
 
@@ -133,7 +133,7 @@ TEST_F(IqClientTest, CanSetChannelSettings)
    EXPECT_EQ(iqClient->GetAnalysisBandwidth(), 195000000);
 }
 
-TEST_F(IqClientTest, DISABLED_CanSetMSR4ByJson)
+TEST_F(IqClientTest, CanSetMSR4ByJson)
 {
    iqClient->SetMSR4ByJson("full/path/to/rs-jerry-driver/configFiles/example.json");
 
@@ -155,6 +155,14 @@ TEST_F(IqClientTest, CanSetDPDKSettings)
 }
 
 TEST_F(IqClientTest, DISABLED_DumpHrzr){
+   DpdkSource::stream_attr *streams = (DpdkSource::stream_attr *) malloc(sizeof(DpdkSource::stream_attr) * 1);
+
+   DpdkSource::stream_attr stream1;
+   stream1.dpdk_port_id = 0;
+   stream1.udp_rx_port  = 5000;
+   stream1.l_cores      = std::pair<int, int>(0, 24);
+   streams[0]           = stream1;
+
    iqClient->SetMSR4ByJson("full/path/to/rs-jerry-driver/configFiles/example.json");
 
    int number_of_samples = 4096;
@@ -163,7 +171,7 @@ TEST_F(IqClientTest, DISABLED_DumpHrzr){
    iqClient->SetBandwidthBySampleRate(10000000);
    iqClient->SetPortID(0);
    iqClient->SetNorm(10000);
-   //iqClient->SetupDpdkSource();
+   iqClient->SetupDpdkSource(streams, 1);
 
    std::complex<float> *output = (std::complex<float> *)malloc(sizeof(std::complex<float>)*number_of_samples);
 
@@ -187,7 +195,7 @@ TEST_F(IqClientTest, DISABLED_GetSamples)
    ReceivePackets(&payload, &payload_size);
 }
 
-TEST_F(IqClientTest, DISABLED_WriteSamplesToFile)
+TEST_F(IqClientTest, WriteSamplesToFile)
 {
    int number_of_packets = 100;
 
@@ -244,7 +252,7 @@ TEST_F(IqClientTest, GetSamplesOnTwoStreams){
 
    iqClient->SetNorm(10000);
    iqClient->SetupDpdkSource(streams, 2);
-   
+
    receiver_args arg1;
    bool should_quit1 = false;
    uint64_t total_samp_recv1 = 0;
