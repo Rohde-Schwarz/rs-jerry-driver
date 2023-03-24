@@ -175,3 +175,34 @@ TEST_F(IqClientTest, WriteSamplesToFile)
       }
    }
 }
+
+TEST_F(IqClientTest, SendPayload)
+{
+   iqClient->hrzr_udp_transmitter = new HrzrUdpTransmitter();
+   iqClient->hrzr_udp_transmitter->setLocalSockaddr("192.168.30.1", 5000);
+   iqClient->hrzr_udp_transmitter->setDestSockaddr("192.168.40.1", 5001);
+   iqClient->hrzr_udp_transmitter->openSocketAndConnect();
+
+   auto localSockAddr = iqClient->hrzr_udp_transmitter->getLocalSockAddr();
+   EXPECT_EQ(localSockAddr.sin_family, AF_INET);
+   EXPECT_EQ(localSockAddr.sin_port, 5000);
+
+   auto destSockAddr = iqClient->hrzr_udp_transmitter->getDestSockAddr();
+   EXPECT_EQ(destSockAddr.sin_family, AF_INET);
+   EXPECT_EQ(destSockAddr.sin_port, htons(5001));
+
+   int complex_f_per_packet = 366;
+
+   std::complex<float> *samples = (std::complex<float> *)malloc(sizeof(std::complex<float>)*complex_f_per_packet);
+   for(int i = 0; i < complex_f_per_packet; i++){
+      samples[i] = std::complex<float>(i, i);
+   }
+
+   int num_packets_to_send = 0x1001;
+   for(int i = 0; i < num_packets_to_send; i++)
+      iqClient->SendPayload(samples, complex_f_per_packet);
+
+   EXPECT_EQ(iqClient->hrzr_udp_transmitter->getCurrentSequenceNumber(), 1);
+
+   free(samples);
+}
