@@ -22,6 +22,8 @@ The following versions are required to build and run:
 | pkg-config  | 0.29.1  | Finding DPDK | `sudo apt-get install pkg-config` |
 | gTest (optional)  | 1.10.0  | Running UnitTests | `sudo apt-get install libgtest-dev` |
 
+Transitive requirements will be reported by CMake and should be installed accordingly.
+
 ## Unit Tests
 
 The unit tests are using the [GoogleTest Framework](https://github.com/google/googletest).
@@ -34,12 +36,17 @@ This project requires the system to be set up correctly according to the RS Jerr
 
 ## Build & Install
 
-```
-mkdir build && cd build
-cmake -DCMAKE_BUILD_TYPE=Release ..
-make
-sudo make install
-```
+Before building, adapt the path to the GRPC installation to your local build path in CMakeLists.txt, for example:
+
+    set(LOCAL_GRPC_PATH /home/GnuRadio/local)
+
+Then, create a build directory and start the installation.
+
+    mkdir build && cd build
+    cmake -DCMAKE_BUILD_TYPE=Release ..
+    make
+    sudo make install
+
 This installs the library `libjerryDriver.a` into `/usr/local/lib` as well as the headers into `/usr/local/include/`.
 
 ## Usage

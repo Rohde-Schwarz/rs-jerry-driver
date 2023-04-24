@@ -136,12 +136,7 @@ rte_eth_dev_info DpdkSource::getDevInfo(int num_stream){
 }
 
 rte_eth_conf DpdkSource::getPortConf(int num_stream, rte_eth_dev_info &dev_info){
-   rte_eth_conf port_conf = {
-       .rxmode =
-           {
-               .split_hdr_size = 0,
-           },
-   };
+   rte_eth_conf port_conf = {};
 
    port_conf.txmode.offloads &= dev_info.tx_offload_capa;
    configurePort(num_stream, port_conf);
@@ -183,7 +178,7 @@ void DpdkSource::assertLinkStatus(int num_stream)
    int link_get_err         = -EINVAL;
 
    link_get_err = rte_eth_link_get(streams[num_stream].dpdk_port_id, &link);
-   if (link_get_err != 0 || link.link_status != ETH_LINK_UP)
+   if (link_get_err != 0 || link.link_status != RTE_ETH_LINK_UP)
       rte_exit(EXIT_FAILURE, "Link is not up");
 }
 

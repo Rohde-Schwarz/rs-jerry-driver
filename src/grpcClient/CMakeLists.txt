@@ -14,11 +14,11 @@ foreach(_target
 
     add_custom_command(
         OUTPUT "${${_target}_proto_srcs}" "${${_target}_proto_hdrs}" "${${_target}_grpc_srcs}" "${${_target}_grpc_hdrs}"
-        COMMAND protoc
+        COMMAND ${GRPC_CPP_PLUGIN_PATH}/protoc
         ARGS --grpc_out "${CMAKE_CURRENT_BINARY_DIR}/generated"
             --cpp_out "${CMAKE_CURRENT_BINARY_DIR}/generated"
             -I "${PROJECT_SOURCE_DIR}/proto"
-            --plugin=protoc-gen-grpc=/usr/bin/grpc_cpp_plugin
+            --plugin=protoc-gen-grpc=${GRPC_CPP_PLUGIN_PATH}/grpc_cpp_plugin
             "${${_target}_proto}"
     )
 
