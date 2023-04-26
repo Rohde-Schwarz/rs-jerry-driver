@@ -18,9 +18,16 @@ The following versions are required to build and run:
 | CMake  | >3.14  | Building | `sudo apt-get install cmake` |
 | gRPC  | 1.44.0  | Configure MSR4 | [Quickstart](https://grpc.io/docs/languages/cpp/quickstart/) |
 | jsoncpp  | 1.7.4 | Alternative to configure MSR4 | `sudo apt-get install libjsoncpp-dev` |
-| DPDK  | 21.02.0  | Speed | [Download](https://core.dpdk.org/download/) + [Building](https://doc.dpdk.org/guides/linux_gsg/build_dpdk.html) |
+| DPDK  | 22.11* | Speed | [Download](https://core.dpdk.org/download/) + [Building](https://doc.dpdk.org/guides/linux_gsg/build_dpdk.html) |
 | pkg-config  | 0.29.1  | Finding DPDK | `sudo apt-get install pkg-config` |
 | gTest (optional)  | 1.10.0  | Running UnitTests | `sudo apt-get install libgtest-dev` |
+
+\* Please note that you may require a different version of DPDK to match your network card driver.
+See also [this example document](https://github.com/Rohde-Schwarz/rs-jerry-setup/blob/main/README_DELL_R640.md)
+for more information in case you use a network card from Intel.
+Also, please make sure that you work with the most recent firmware available for your NIC.
+
+Transitive requirements will be reported by CMake and should be installed accordingly.
 
 ## Unit Tests
 
@@ -34,12 +41,17 @@ This project requires the system to be set up correctly according to the RS Jerr
 
 ## Build & Install
 
-```
-mkdir build && cd build
-cmake -DCMAKE_BUILD_TYPE=Release ..
-make
-sudo make install
-```
+Before building, adapt the path to the GRPC installation to your local build path in CMakeLists.txt, for example:
+
+    set(LOCAL_GRPC_PATH /home/GnuRadio/local)
+
+Then, create a build directory and start the installation.
+
+    mkdir build && cd build
+    cmake -DCMAKE_BUILD_TYPE=Release ..
+    make
+    sudo make install
+
 This installs the library `libjerryDriver.a` into `/usr/local/lib` as well as the headers into `/usr/local/include/`.
 
 ## Usage

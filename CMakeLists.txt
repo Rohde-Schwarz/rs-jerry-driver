@@ -1,6 +1,12 @@
 cmake_minimum_required(VERSION 3.14)
 project(jerryDriver)
 
+set(LOCAL_GRPC_PATH /usr)
+set(ENV{PKG_CONFIG_PATH} ${LOCAL_GRPC_PATH}/share/pkgconfig:${LOCAL_GRPC_PATH}/lib/pkgconfig:$ENV{PKG_CONFIG_PATH})
+set(CMAKE_INCLUDE_PATH ${LOCAL_GRPC_PATH}/include ${CMAKE_INCLUDE_PATH})
+set(CMAKE_LIBRARY_PATH ${LOCAL_GRPC_PATH}/lib ${CMAKE_LIBRARY_PATH})
+set(GRPC_CPP_PLUGIN_PATH ${LOCAL_GRPC_PATH}/bin)
+
 find_package(Protobuf REQUIRED)
 find_package(gRPC CONFIG REQUIRED)
 find_package(PkgConfig REQUIRED)
@@ -10,9 +16,9 @@ message("-- Found gRPC, version " ${gRPC_VERSION})
 message("-- Found PkgConfig, version " ${PKG_CONFIG_VERSION_STRING})
 message("-- Found DPDK, version " ${DPDK_VERSION})
 
+execute_process(COMMAND pkg-config --libs --cflags protobuf grpc++ libdpdk OUTPUT_VARIABLE PKG_CONFIG_FLAGS)
+add_definitions(${PKG_CONFIG_FLAGS})
 add_definitions("-std=c++17")
-add_definitions(`pkg-config --libs --cflags protobuf grpc++`)
-add_definitions(`pkg-config --libs --cflags libdpdk`)
 
 set(CMAKE_BUILD_TYPE Release)
 set(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} -fPIC -O3")
