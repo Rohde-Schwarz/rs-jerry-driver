@@ -78,7 +78,7 @@ protected:
 
       iqClient->SetStreamingStatus(true);
 
-      int itr = 0;
+      auto itr = 0U;
       while (itr < nsamples_ptr->size())
       {
          nsamples_ptr->at(itr) = iqClient->GetSamples(0, 3660, payload->at(itr).data());

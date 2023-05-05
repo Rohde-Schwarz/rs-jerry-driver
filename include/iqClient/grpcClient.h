@@ -15,7 +15,7 @@
 
 class GrpcClient {
 public:
-   enum MSR4Channel { Rx1 = 50055, Rx2, Rx3, Rx4 };
+   enum class MSR4Channel { Rx1 = 50055, Rx2, Rx3, Rx4 };
 
    GrpcClient();
 

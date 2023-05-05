@@ -27,10 +27,10 @@ class DpdkSource : public ILinuxSource {
 public:
    struct stream_attr {
       std::pair<int, int> l_cores;
-      int dpdk_port_id;
-      uint16_t udp_rx_port;
-      struct rte_mempool *mbuf_pool;
-      struct rte_ring *ring;
+      int dpdk_port_id = -1;
+      uint16_t udp_rx_port = 0;
+      struct rte_mempool *mbuf_pool = nullptr;
+      struct rte_ring *ring = nullptr;
    };
 
    struct rx_thread_arg{
@@ -67,7 +67,7 @@ private:
 
    static int RXThread(rx_thread_arg *rx_thread_arg);
    void stopRXThread();
-   static int dumpThread(DpdkSource *dpdkSource, int num_stream);
+   static int dumpThread(rx_thread_arg *rx_thread_arg);
    bool isValidPacketType(HrzrHeaderParser::PacketType type);
 
    std::unique_ptr<HrzrParser> hrzr_parser;
@@ -79,6 +79,8 @@ private:
    uint64_t total_packets;
    uint64_t total_packets_lost;
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wpacked-not-aligned"
    struct udp_hdr {
       uint16_t src_port;
       uint16_t dst_port;
@@ -87,12 +89,12 @@ private:
    } __attribute__((__packed__));
 
    struct hrzr_packet_all_headers {
-
       struct rte_ether_hdr ether_hdr;
       struct rte_ipv4_hdr ipv4_hdr;
       struct udp_hdr udp;
       uint64_t hrzr;
    } __attribute__((__packed__));
+#pragma GCC diagnostic pop
 };
 
 #endif /* INCLUDED_DPDK_SOURCE_H */

@@ -22,8 +22,9 @@ add_definitions(${PKG_CONFIG_FLAGS})
 add_definitions("-std=c++17")
 
 set(CMAKE_BUILD_TYPE Release)
-set(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} -fPIC -O3")
-set(CMAKE_C_FLAGS  "${CMAKE_C_FLAGS} -fPIC -O3")
+set(ADDITIONAL_FLAGS "-Wall -Wextra -Werror -Wno-unknown-pragmas -fPIC -O3")
+set(CMAKE_CXX_FLAGS  ${CMAKE_CXX_FLAGS} ${ADDITIONAL_FLAGS})
+set(CMAKE_C_FLAGS  ${CMAKE_C_FLAGS} ${ADDITIONAL_FLAGS})
 
 OPTION(BUILD_TESTS "Build unit tests" ON)
 

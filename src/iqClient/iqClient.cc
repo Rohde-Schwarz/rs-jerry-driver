@@ -21,9 +21,9 @@ SOFTWARE.
 #include "iqClient.h"
 
 IqClient::IqClient()
-   : norm(1)
+   : dump_mode(false)
+   , norm(1)
    , grpc_client(new GrpcClient())
-   , dump_mode(false)
 {}
 
 grpc::Status IqClient::MSR4Login()
