@@ -217,7 +217,8 @@ int DpdkSource::getSamples(int num_stream, int number_of_samples, std::complex<f
 
    for (auto packet_idx = 0U; packet_idx < packets_dequeued; packet_idx++)
    {
-      int16_t *payload = rte_pktmbuf_mtod_offset((struct rte_mbuf *) mbufs[packet_idx], int16_t *, sizeof(hrzr_packet_all_headers));
+      struct rte_mbuf *mbuf = mbufs[packet_idx];
+      int16_t *payload      = rte_pktmbuf_mtod_offset(mbuf, int16_t *, sizeof(hrzr_packet_all_headers));
 
       auto samples_received = hrzr_parser->parsePayloadSamples(packet_idx, (int16_t *) payload, samples);
 
@@ -351,7 +352,7 @@ int DpdkSource::RXThread(rx_thread_arg *rx_thread_arg)
    int j;
 
    int prev_seq;
-   int seq      = 0;
+   int seq = 0;
 
    const auto port_id = dpdkSource->getPortID(num_stream);
 
