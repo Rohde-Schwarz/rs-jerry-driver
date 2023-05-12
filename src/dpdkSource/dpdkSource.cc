@@ -213,14 +213,14 @@ int DpdkSource::getSamples(int num_stream, int number_of_samples, std::complex<f
    auto packets_to_dequeue = ((number_of_samples) / definitions::SAMPLES_PER_PACKET) + 1;
    struct rte_mbuf *mbufs[packets_to_dequeue];
    auto total_samples_received = 0;
-   auto packets_dequeued       = rte_ring_sc_dequeue_burst(getRteRing(num_stream), (void **) mbufs, packets_to_dequeue, NULL);
+   auto packets_dequeued = rte_eth_rx_burst(getPortID(num_stream), definitions::SELECTED_QUEUE, mbufs, packets_to_dequeue);
 
    for (auto packet_idx = 0U; packet_idx < packets_dequeued; packet_idx++)
    {
       struct rte_mbuf *mbuf = mbufs[packet_idx];
       int16_t *payload      = rte_pktmbuf_mtod_offset(mbuf, int16_t *, sizeof(hrzr_packet_all_headers));
 
-      auto samples_received = hrzr_parser->parsePayloadSamples(packet_idx, (int16_t *) payload, samples);
+      auto samples_received = hrzr_parser->parsePayloadSamples(static_cast<int>(packet_idx), (int16_t *) payload, samples);
 
       rte_pktmbuf_free((struct rte_mbuf *) mbufs[packet_idx]);
       total_samples_received += samples_received;
