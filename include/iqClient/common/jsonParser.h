@@ -13,15 +13,15 @@ public:
       std::string password;
    };
    struct RxChannelStruct {
-      int rx_channel;
+      int rx_channel = -1;
    };
    struct StreamingStruct {
-      int sat_frequency;
-      int down_frequency;
-      int bandwith_by_analysis_bandwidth;
+      int sat_frequency = -1;
+      int down_frequency = -1;
+      int bandwith_by_analysis_bandwidth = -1;
    };
    struct ChannelStruct {
-      int port;
+      int port = -1;
       std::string destination_address;
       std::string protocol;
    };

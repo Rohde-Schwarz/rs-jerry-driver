@@ -96,9 +96,9 @@ public:
 private:
    const std::string VERSION = "1.0";
 
-   GrpcClient::MSR4Channel msr4_channel;
+   GrpcClient::MSR4Channel msr4_channel = GrpcClient::MSR4Channel::Rx1;
 
-   int port_id;
+   int port_id = -1;
    bool dump_mode;
    float norm;
 
